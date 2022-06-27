@@ -1,0 +1,30 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Enemy_Move : MonoBehaviour
+{
+    public int nextMove;                // -1 왼쪽, 0 정지, 1 오른쪽  이동을 담는 변수 
+
+    Rigidbody2D rigid;                  // Rigidbody2D 를 rigid 변수로 선언 
+
+    void Start()
+    {
+        rigid = GetComponent<Rigidbody2D>();                // rigid 변수로 GetComponent를 이용하여 Rigidbody2D를 호출 
+        Invoke("Think",3);                                  // Invoke("함수명", 값); => 값 만큼 기다렸다가 함수가 동작 
+    }
+
+
+
+    void FixedUpdate()
+    {
+        rigid.velocity = new Vector2(nextMove, rigid.velocity.y);     // velocity를 변경하여 키를 누르지 않아도 x 값에 의해 이동 
+    }
+
+    void Think()                                          // 이동을 결정 하는 함수 
+    {
+        nextMove = Random.Range(-1, 2);                   // -1 ~ 1 사이의 난수 발생 ( Range( 초기값, 최대값+1 )
+
+        Invoke("Think", 3);
+    }
+}
