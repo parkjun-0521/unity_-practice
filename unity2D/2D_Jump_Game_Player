@@ -22,8 +22,8 @@ public class Player_Move : MonoBehaviour
     Rigidbody2D rigid;                                               // Rigidbody2D 를 rigid 변수로 선언 
     SpriteRenderer spriteRenderer;                                   // SpriteRenderer 를 spriteRenderer 변수로 선언     ==> bool형 이다. 따라서 True, False 값 이용
     Animator anima;                                                  // Animator 를 animator 변수로 선언
-    CapsuleCollider2D capsuleCollider;
-    AudioSource audioSource;
+    CapsuleCollider2D capsuleCollider;                               // CapsuleCollider2D 를 capsuleCollider로 선언 
+    AudioSource audioSource;                                         // AudioSource 를 audioSource 선언 
 
     void Start()
     {
@@ -32,7 +32,7 @@ public class Player_Move : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();             // spriteRenderer 변수로 GetComponent를 이용하여 SpriteRenderer 호출
         anima = GetComponent<Animator>();                            // animator 변수로 GetComponent 이용하여 Animator 호출
         capsuleCollider = GetComponent<CapsuleCollider2D>();         // capsuleCollider 변수로 GetComponent 이용하여 CapsuleCollider2D 호출
-        audioSource = GetComponent<AudioSource>();
+        audioSource = GetComponent<AudioSource>();                   // audioSource 변수로 GetComponent 이용하여 AudioSource 호출
     }
     
     void Sound(string action)                                       // 사운드 관련 함수 
@@ -238,3 +238,4 @@ public class Player_Move : MonoBehaviour
         rigid.velocity = Vector2.zero;
     }
 }
+
