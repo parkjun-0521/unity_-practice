@@ -1,0 +1,100 @@
+// 2022-06-29
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;                           // UI의 명령어를 사용하기 위해 필요 
+using UnityEngine.SceneManagement;              // SceneManagement 를 사용하기 위해 필요 
+
+public class GameManager : MonoBehaviour
+{
+    // gamemanager은 점수관리 및 스테이지 관리 
+
+    public int totalPoint;              // 종합 점수 변수 
+    public int stagePoint;              // 각 스테이지 점수 변수 
+    public int stageIndex;              // 각 스테이지 변수 
+
+    public int Health;                  // Player 체력 변수 
+
+    public Player_Move player;          // Player_Move 스크립트를 player로 불러온다. => public으로 주어 Inspector 창에서 Player_Move 스크립트를 넣어줘야함 
+    public GameObject[] Stage;          // GameObject의 Stage변수를 배열로 선언하고 public으로 선언하여 외부에서 스테이지를 불러온다 
+
+    public Image[] UIhealth;            // 외부에서 체력 관련 UI를 불러 저장하는 변수 
+    public Text UIPoint;                // 외부에서 점수에 관한 UI를 불러 저장하는 변수 
+    public Text UIStage;                // 외부에서 스테이지에 관한 UI를 불러 저장하는 변수 
+    public GameObject RestarButton;     // 외부에서 Buotton을 가져오는 변수 
+
+    void Update(){
+        UIPoint.text = (totalPoint + stagePoint).ToString();        // UI 점수 Text에 종합 점수를 보여준다. 
+    }
+    public void NextStage()
+    {
+        // 스테이지 클리어 후 이동 && player 위치 초기화 
+        if (stageIndex < Stage.Length - 1){                         // 현재 스테이지가 전체스테이지의 길이보다 작다면 => 스테이지의 길이는 외부(Inspector 에서 선언)                
+            Stage[stageIndex].SetActive(false);                     // 현재 스테이지 비활성화
+            stageIndex++;                                           // 다음 스테이지 
+            Stage[stageIndex].SetActive(true);                      // 다음 스테이지 활성화 
+            PlayReposition();                                       // Player 위치를 초기화 
+
+            UIStage.text = "STAGE " + (stageIndex + 1);             // 현재 스테이지를 UI 화면에 나타냄 
+        }
+        else {                                                      // 현재 맵을 다 깼을때 
+            Time.timeScale = 0;                                     // 프로그램 스탑 => 시간을 0으로 주어 프로그램이 멈춘다. 
+            //Debug.Log("게임 클리어");                                
+            
+            // Retry 버튼 수정 
+            Text buttonText = RestarButton.GetComponentInChildren<Text>();          // Retry 버튼의 Text를 불러온다. Button 아래에 있는 Text 이므로 GetComponentInChildren 를 써줘야 한다. 
+            buttonText.text = "Gaem Clear";                                         // Text를 바꿈 
+            RestarButton.SetActive(true);                                           // Button 활성화 
+        }
+
+        // 점수 종합 
+        totalPoint += stagePoint;           // 종합 점수는 현재 스테이지 점수를 누적 
+        stagePoint = 0;                     // 다음 스테이지로 넘어갈 시 점수 초기화 
+    }
+
+    public void HealthDown(){               // Player 체력 함수 
+        if (Health > 1)
+        {
+            // 체력 감소
+            Health--;
+
+            // 체력 UI 색 변경 
+            UIhealth[Health].color = new Color(1, 0, 0, 0.4f);
+        }
+        else{
+            // 게임 종료시 마기막 한개의 UI가 안바뀌는것을 수정 
+            UIhealth[0].color = new Color(1, 0, 0, 0.4f);
+
+            // 체력이 0일때 
+            player.OnDeath();
+
+            // Retry 버튼 활성화 
+            RestarButton.SetActive(true);
+        }
+        
+    }
+
+    void OnTriggerEnter2D(Collider2D collision)                 // 게임 밖으로 떨어 졌을시 동작 
+    {
+        if(collision.gameObject.tag == "Player") {
+            if (Health > 0){
+                // 플레이어 원래 위치로 이동 
+                PlayReposition();
+            }
+            // 체력 감소 
+            HealthDown();
+        }
+    }
+
+    void PlayReposition(){                                      // 플레이어 위치 초기화 
+        player.transform.position = new Vector3(-8, 8, 0);      // x = -8, y = 8, z = 0 좌표로 초기화 
+        player.VelocityZero();                                  // Player가 떨어져서 체력이 닳으면 가속도를 0으로 만드는 함수 
+    }   
+    
+
+    public void Restart()
+    {
+        Time.timeScale = 1;                 // 재시작을 위해 시간을 1로 초기화 
+        SceneManager.LoadScene(0);          // 씬을 0번 씬으로 불러온다 
+    }
+}
