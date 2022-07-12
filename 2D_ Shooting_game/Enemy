@@ -1,0 +1,332 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Enemy : MonoBehaviour
+{
+
+    public string enemyName;
+    public int enemyScore;
+
+    public float speed;                 // 적 이동속도 
+    public int health;                  // 적 체력 
+    public Sprite[] sprites;            // 스프라이트 변수 
+
+    // 총알 발사 주기 
+    public float maxShotDelay;          // 총알 최대 딜레이 
+    public float curShotDelay;          // 총알 충전 딜레이 
+
+    // 총알 변수 
+    public GameObject enemyBulletObjA;   // 총알 오브젝트 A
+    public GameObject enemyBulletObjB;   // 총알 오브젝트 B
+
+    // 아이템 저장 
+    public GameObject itemCoin;
+    public GameObject itemPower;
+    public GameObject itemBoom;
+
+    // player 오브젝트 접근 
+    public GameObject player;
+
+    // 게임 오브젝트 메니저 접근 
+    public ObjectManager objectManager;
+
+    //Rigidbody2D rigid;                  // 움직임 관련 변수 
+    SpriteRenderer spriteRenderer;      // 스프라이트 관련 변수 
+
+    Animator anime;
+
+    public int patternIndex;
+    public int curPatternCount;
+    public int[] maxPatternCount;
+
+    void Awake()
+    {
+        spriteRenderer = GetComponent<SpriteRenderer>();    // spriteRenderer 변수 초기화 
+
+        // 대각선으로 오는 적이 있으므로 로직 삭제 
+        //rigid = GetComponent<Rigidbody2D>();                // rigid 변수 초기화    
+        //rigid.velocity = Vector2.down * speed;              // 적 속도 초기화 
+
+        if(enemyName == "B")
+            anime = GetComponent<Animator>();
+    }
+
+    void OnEnable()
+    {
+        switch (enemyName) {
+            case "B":
+                health = 700;
+                Invoke("Stop",2);
+                break;
+            case "L":
+                health = 50;
+                break;
+            case "M":
+                health = 15;
+                break;
+            case "S":
+                health = 7;
+                break;
+        }
+    }
+
+    void Stop()
+    {
+        if (!gameObject.activeSelf)
+            return;
+
+        Rigidbody2D rigid = GetComponent<Rigidbody2D>();
+        rigid.velocity = Vector2.zero;
+
+        Invoke("Think", 2);
+    }
+
+    void Think()
+    {
+        patternIndex = patternIndex == 3 ? 0 : patternIndex + 1;
+        curPatternCount = 0;
+
+        switch (patternIndex) {
+            case 0:
+                FireFoward();
+                break;
+            case 1:
+                FireShot();
+                break;
+            case 2:
+                FireArc();
+                break;
+            case 3:
+                FireAround();
+                break;
+        }
+    }
+
+    void FireFoward()
+    {
+        // 4발 발사 
+        GameObject bulletR = objectManager.MakeObj("BulletEnemyD");
+        bulletR.transform.position = transform.position + Vector3.right * 0.2f;
+        GameObject bulletRR = objectManager.MakeObj("BulletEnemyD");
+        bulletRR.transform.position = transform.position + Vector3.right * 0.3f;
+        GameObject bulletL = objectManager.MakeObj("BulletEnemyD");
+        bulletL.transform.position = transform.position + Vector3.left * 0.2f;
+        GameObject bulletLL = objectManager.MakeObj("BulletEnemyD");
+        bulletLL.transform.position = transform.position + Vector3.left * 0.3f;
+
+        Rigidbody2D rigidR = bulletR.GetComponent<Rigidbody2D>();                                     // GameObject 로 가져온 프리팹을 rigid로 초기화
+        Rigidbody2D rigidRR = bulletR.GetComponent<Rigidbody2D>();                                     // GameObject 로 가져온 프리팹을 rigid로 초기화
+        Rigidbody2D rigidL = bulletL.GetComponent<Rigidbody2D>();                                     // GameObject 로 가져온 프리팹을 rigid로 초기화 
+        Rigidbody2D rigidLL = bulletL.GetComponent<Rigidbody2D>();                                     // GameObject 로 가져온 프리팹을 rigid로 초기화 
+
+        rigidR.AddForce(Vector2.down * 6, ForceMode2D.Impulse);                               // 플레이어 방향으로 총알 발사  => normalized 단위 벡터로 만듬                                       
+        rigidRR.AddForce(Vector2.down * 6, ForceMode2D.Impulse);                               // 플레이어 방향으로 총알 발사  => normalized 단위 벡터로 만듬                                       
+        rigidL.AddForce(Vector2.down * 6, ForceMode2D.Impulse);                               // 플레이어 방향으로 총알 발사  
+        rigidLL.AddForce(Vector2.down * 6, ForceMode2D.Impulse);                               // 플레이어 방향으로 총알 발사  
+
+
+        curPatternCount++;
+
+        if (curPatternCount < maxPatternCount[patternIndex])
+            Invoke("FireFoward", 2);
+        else 
+            Invoke("Think", 3);
+    }
+
+    void FireShot()
+    {
+        for (int index = 0; index < 5; index++) {
+            GameObject bullet = objectManager.MakeObj("BulletEnemyC");
+            bullet.transform.position = transform.position;
+
+            Rigidbody2D rigid = bullet.GetComponent<Rigidbody2D>();                                     // GameObject 로 가져온 프리팹을 rigid로 초기화 
+
+            Vector2 dirVec = player.transform.position - transform.position;                            // 목표물로 방향 = 목표물 위치 - 자신의 위치 
+
+            Vector2 ranVec = new Vector2(Random.Range(-0.5f, 0.5f), Random.Range(0f, 2f));
+            dirVec += ranVec;
+            rigid.AddForce(dirVec.normalized * 5, ForceMode2D.Impulse);                                                // 플레이어 방향으로 총알 발사      
+        }
+
+        curPatternCount++;
+
+        if (curPatternCount < maxPatternCount[patternIndex])
+            Invoke("FireShot", 3.5f);
+        else
+            Invoke("Think", 3);
+    }
+
+    void FireArc()
+    {
+        GameObject bullet = objectManager.MakeObj("BulletEnemyA");
+        bullet.transform.position = transform.position;
+        bullet.transform.rotation = Quaternion.identity;
+
+        Rigidbody2D rigid = bullet.GetComponent<Rigidbody2D>();                                     // GameObject 로 가져온 프리팹을 rigid로 초기화 
+        Vector2 dirVec = new Vector2(Mathf.Sin(Mathf.PI * 3 * curPatternCount/ maxPatternCount[patternIndex]), -1);
+        rigid.AddForce(dirVec.normalized * 5, ForceMode2D.Impulse);
+
+        curPatternCount++;
+
+        if (curPatternCount < maxPatternCount[patternIndex])
+            Invoke("FireArc", 0.15f);
+        else
+            Invoke("Think", 3);
+    }
+
+    void FireAround()
+    {
+        int roundNumA = 50;
+        int roundNumB = 40;
+        int roundNum = curPatternCount % 2 == 0 ? roundNumA : roundNumB;
+        for (int index = 0; index < roundNum; index++) {
+            GameObject bullet = objectManager.MakeObj("BulletEnemyC");
+            bullet.transform.position = transform.position;
+            bullet.transform.rotation = Quaternion.identity;
+
+            Rigidbody2D rigid = bullet.GetComponent<Rigidbody2D>();                                     // GameObject 로 가져온 프리팹을 rigid로 초기화 
+            Vector2 dirVec = new Vector2(Mathf.Cos(Mathf.PI * 2 * index / roundNum), Mathf.Sin(Mathf.PI * 2 * index / roundNum));
+            rigid.AddForce(dirVec.normalized * 2, ForceMode2D.Impulse);
+
+            Vector3 rotVec = Vector3.forward * 360 * index / roundNum + Vector3.forward * 90;
+            bullet.transform.Rotate(rotVec);
+        }
+
+        curPatternCount++;
+
+        if (curPatternCount < maxPatternCount[patternIndex])
+            Invoke("FireAround", 0.7f);
+        else
+            Invoke("Think", 3);
+    }
+
+
+    void Update()
+    {
+        if (enemyName == "B")
+            return;
+
+        Fire();         // 총알 관련 함수 
+        Reload();       // 총알 장전 함수 (딜레이)
+    }
+
+    void Fire()
+    {
+        if (curShotDelay < maxShotDelay)                 // 현재 장전 딜레이가 최대 딜레이 보다 커야 총알 발사 
+            return;
+
+        if (enemyName == "S") {
+            //GameObject bullet = Instantiate(enemyBulletObjA, transform.position, transform.rotation);   // Instantiate( 프리팹, 생성위치, 오브젝트 방향 ) 으로 총알 생성
+
+            GameObject bullet = objectManager.MakeObj("BulletEnemyA");
+            bullet.transform.position = transform.position;
+
+            Rigidbody2D rigid = bullet.GetComponent<Rigidbody2D>();                                     // GameObject 로 가져온 프리팹을 rigid로 초기화 
+
+            Vector3 dirVec = player.transform.position - transform.position;                            // 목표물로 방향 = 목표물 위치 - 자신의 위치 
+            rigid.AddForce(dirVec.normalized * 5, ForceMode2D.Impulse);                                                // 플레이어 방향으로 총알 발사                                       
+        }
+        else if (enemyName == "L") {
+            //GameObject bulletR = Instantiate(enemyBulletObjB, transform.position + Vector3.right * 0.2f, transform.rotation);    // Instantiate( 프리팹, 생성위치, 오브젝트 방향 ) 으로 총알 생성
+            //GameObject bulletL = Instantiate(enemyBulletObjB, transform.position + Vector3.left * 0.2f, transform.rotation);     // Instantiate( 프리팹, 생성위치, 오브젝트 방향 ) 으로 총알 생성
+            
+            GameObject bulletR = objectManager.MakeObj("BulletEnemyB");
+            bulletR.transform.position = transform.position + Vector3.right * 0.2f;
+
+            GameObject bulletL = objectManager.MakeObj("BulletEnemyB");
+            bulletL.transform.position = transform.position + Vector3.left * 0.2f;
+
+            Rigidbody2D rigidR = bulletR.GetComponent<Rigidbody2D>();                                     // GameObject 로 가져온 프리팹을 rigid로 초기화
+            Rigidbody2D rigidL = bulletL.GetComponent<Rigidbody2D>();                                     // GameObject 로 가져온 프리팹을 rigid로 초기화 
+
+            Vector3 dirVecR = player.transform.position - (transform.position + Vector3.right * 0.2f);      // 목표물로 방향 = 목표물 위치 - 자신의 위치 
+            Vector3 dirVecL = player.transform.position - (transform.position + Vector3.left * 0.2f);       // 목표물로 방향 = 목표물 위치 - 자신의 위치
+            
+            rigidR.AddForce(dirVecR.normalized * 3, ForceMode2D.Impulse);                               // 플레이어 방향으로 총알 발사  => normalized 단위 벡터로 만듬                                       
+            rigidL.AddForce(dirVecL.normalized * 3, ForceMode2D.Impulse);                               // 플레이어 방향으로 총알 발사  
+        }
+       
+        curShotDelay = 0;                                // 총알을 쏜 후에 장전 시간을 0으로 초기화 
+    }
+
+    // 총알 장전 함수 (딜레이)
+    void Reload()
+    {
+        curShotDelay += Time.deltaTime;         //  장전 시간에 현재 시간을 계속 더해 장전 시간을 나타냄 ( 장전 시간 초기화 필요 )
+    }
+
+    // 맞았을 시 
+    public void OnHit(int dmg)
+    {
+        if (health <= 0)
+            return;
+
+        // 체력 감소 
+        health -= dmg;                          // 피해를 입을 시 체력 감소
+
+        // 애니메이션 
+        if (enemyName == "B") {
+            anime.SetTrigger("OnHit");
+        }
+        else { 
+            spriteRenderer.sprite = sprites[1];     // index 1의 모양으로 변경
+            Invoke("ReturnSprite", 0.1f);           // 충돌 후 애니메이션 원상 복귀 
+        }
+
+        // 파괴 
+        if (health <= 0) {                      // 체력이 0보다 작거나 같을때 파괴 
+            Player playerLogic = player.GetComponent<Player>();
+            playerLogic.score += enemyScore;
+
+            // 아이템 떨구기 
+            int rand = enemyName == "B" ? 0 : Random.Range(0, 10);
+            if (rand < 4) {                                                                     // 30%
+                Debug.Log("Not Item");
+            }
+            else if(rand < 6) {
+                //Instantiate(itemCoin, transform.position, itemCoin.transform.rotation);         // 30%
+                GameObject itemCoin = objectManager.MakeObj("ItemCoin");
+                itemCoin.transform.position = transform.position;
+            }
+            else if(rand < 8) {
+                //Instantiate(itemBoom, transform.position, itemCoin.transform.rotation);         // 20%
+                GameObject itemBoom = objectManager.MakeObj("ItemBoom");
+                itemBoom.transform.position = transform.position;
+            }
+            else if(rand < 10) {
+                //Instantiate(itemPower, transform.position, itemCoin.transform.rotation);        // 20%
+                GameObject itemPower = objectManager.MakeObj("ItemPower");
+                itemPower.transform.position = transform.position;
+            }
+
+            //Destroy(gameObject);
+            gameObject.SetActive(false);
+            transform.rotation = Quaternion.identity;
+        }
+    }
+
+    // 충돌 이후 원래상태로 돌아오기 
+    void ReturnSprite()
+    {
+        spriteRenderer.sprite = sprites[0];     // index 1의 모양으로 변경 
+    }
+
+    void OnTriggerEnter2D(Collider2D collision)
+    {
+        // 맵 밖으로 나갈 시 오브젝트 파괴 && 총알 피격시 체력 감소 
+        if (collision.gameObject.tag == "BorderBullet" && enemyName != "B") {
+            //Destroy(gameObject);                                            // 맵 밖으로 나갈시 파괴
+            gameObject.SetActive(false);
+            transform.rotation = Quaternion.identity;
+        }
+        else if (collision.gameObject.tag == "Bullet") {
+            Bullet bullet = collision.gameObject.GetComponent<Bullet>();    // Bullet 스크립트를 bullet으로 가져와 초기화 
+            OnHit(bullet.dmg);                                              // 총알에 맞을 시 체력감소 
+
+            //Destroy(collision.gameObject);                                  // enemy와 충돌한 오브젝트 파괴 
+            collision.gameObject.SetActive(false);
+        }
+            
+    }
+}
