@@ -1,0 +1,322 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Player : MonoBehaviour
+{
+    // 속도 관련 변수
+    public float Speed;             // Player 속도 변수 
+    public float maxShotDelay;      // 총알 최대 딜레이 
+    public float curShotDelay;      // 총알 충전 딜레이  
+
+    // 파워 변수 
+    public int power;             // 총알 파워
+    public int maxPower;          // 파워 최대값 
+
+    // 충돌 변수 
+    public bool isTouchTop;         // Top Border에 닿았을 때 
+    public bool isTouchBottom;      // Bottom Border에 닿았을 때 
+    public bool isTouchLeft;        // Left Border에 닿았을 때 
+    public bool isTouchRight;       // Right Border에 닿았을 때 
+
+    // 점수 및 목숨 
+    public int life;
+    public int score;
+
+    // 총알 변수 
+    public GameObject bulletObjA;   // 총알 오브젝트 A
+    public GameObject bulletObjB;   // 총알 오브젝트 B
+
+    // Boom
+    public GameObject boom;
+    public int boomAmount;
+    public int maxBoom;
+    public bool isBoomTime;
+
+    // 기타 변수 
+    public GameManager gameManager; // 게임매니저 스크립트 불러오기 
+    Animator anima;                 // 애니메이션 
+    public bool isHit;
+
+    public GameObject[] followers;
+
+    public ObjectManager objectManager;
+    void Awake()
+    {
+        anima = GetComponent<Animator>();       // anima 초기화 
+    }
+    void Update()
+    {
+        Move();         // 이동 관련 함수 
+        Fire();         // 총알 관련 함수 
+        Boom();
+        Reload();       // 총알 장전 함수 (딜레이)
+    }
+
+    // 기본 이동 함수 
+    void Move()
+    {
+        // 기본 이동 로직 및 충돌 
+        float h = Input.GetAxisRaw("Horizontal");                               // 좌, 우
+        if (isTouchLeft && h == -1 || isTouchRight && h == 1)                   // 좌, 우 Border에 닿았을 시 속도를 0으로 ( 맵 밖으로 나가지 않도록 ) 
+            h = 0;
+
+        float v = Input.GetAxisRaw("Vertical");                                 // 상, 하 
+        if (isTouchTop && v == 1 || isTouchBottom && v == -1)                   // 상, 하 Border에 닿았을 시 속도를 0으로 ( 맵 밖으로 나가지 않도록 )
+            v = 0;
+
+        Vector3 curPos = transform.position;
+        Vector3 nextPos = new Vector3(h, v, 0) * Speed * Time.deltaTime;        // 물리적인 이동이 아닌 transform이동은 Time.deltaTime을 곱해줘야 한다. 
+
+        // 실제 위치 이동 
+        transform.position = curPos + nextPos;
+
+        // 애니메이션 변경 (좌, 우 애니메이션)
+        if (Input.GetButtonDown("Horizontal") || Input.GetButtonUp("Horizontal"))
+            anima.SetInteger("Input", (int)h);
+    }
+
+    // 총알 관련 함수 
+    void Fire()
+    {
+        if (!Input.GetButton("Fire1"))                                          // Fire1 버튼을 누르지 않으면 return
+            return;
+
+        if (curShotDelay < maxShotDelay)                                        // 현재 장전 딜레이가 최대 딜레이 보다 커야 총알 발사 
+            return;
+
+        switch (power) {
+            case 1:
+                // 파워 1
+                // GameObject bullet = Instantiate(bulletObjA, transform.position, transform.rotation);  
+                GameObject bullet = objectManager.MakeObj("BulletPlayerA");                                                             // Instantiate( 프리팹, 생성위치, 오브젝트 방향 ) 으로 총알 생성
+                bullet.transform.position = transform.position;
+                
+                Rigidbody2D rigid = bullet.GetComponent<Rigidbody2D>();                                                                 // GameObject 로 가져온 프리팹을 rigid로 초기화 
+                rigid.AddForce(Vector2.up * 10, ForceMode2D.Impulse);                                                                   // 위쪽 방향으로 이동
+                break;
+            case 2:
+                // 파워 2
+                //GameObject bulletR = Instantiate(bulletObjA, transform.position + Vector3.right * 0.1f, transform.rotation);            // Instantiate( 프리팹, 생성위치, 오브젝트 방향 ) 으로 오른쪽 총알 생성 
+                //GameObject bulletL = Instantiate(bulletObjA, transform.position + Vector3.left * 0.1f, transform.rotation);             // Instantiate( 프리팹, 생성위치, 오브젝트 방향 ) 으로 왼쪽 총알 생성
+                GameObject bulletR = objectManager.MakeObj("BulletPlayerA");
+                bulletR.transform.position = transform.position + Vector3.right * 0.1f;
+
+                GameObject bulletL = objectManager.MakeObj("BulletPlayerA");
+                bulletL.transform.position = transform.position + Vector3.left * 0.1f;
+
+                Rigidbody2D rigidR = bulletR.GetComponent<Rigidbody2D>();                                                               // GameObject 로 가져온 프리팹을 rigid로 초기화 
+                Rigidbody2D rigidL = bulletL.GetComponent<Rigidbody2D>();                                                               // GameObject 로 가져온 프리팹을 rigid로 초기화 
+                rigidR.AddForce(Vector2.up * 10, ForceMode2D.Impulse);                                                                  // 위쪽 방향으로 이동
+                rigidL.AddForce(Vector2.up * 10, ForceMode2D.Impulse);                                                                  // 위쪽 방향으로 이동
+                break;
+            default:
+                // 파워 3
+                //GameObject bulletRR = Instantiate(bulletObjA, transform.position + Vector3.right * 0.105f, transform.rotation);         // Instantiate( 프리팹, 생성위치, 오브젝트 방향 ) 으로 오른쪽 총알 생성 
+                //GameObject bulletCC = Instantiate(bulletObjB, transform.position + Vector3.up * 0.05f, transform.rotation);             // Instantiate( 프리팹, 생성위치, 오브젝트 방향 ) 으로 중앙 총알 생성
+                //GameObject bulletLL = Instantiate(bulletObjA, transform.position + Vector3.left * 0.105f, transform.rotation);          // Instantiate( 프리팹, 생성위치, 오브젝트 방향 ) 으로 왼쪽 총알 생성
+
+                GameObject bulletRR = objectManager.MakeObj("BulletPlayerA");
+                bulletRR.transform.position = transform.position + Vector3.right * 0.105f;
+
+                GameObject bulletCC = objectManager.MakeObj("BulletPlayerB");
+                bulletCC.transform.position = transform.position + Vector3.up * 0.05f;
+
+                GameObject bulletLL = objectManager.MakeObj("BulletPlayerA");
+                bulletLL.transform.position = transform.position + Vector3.left * 0.105f;
+
+                Rigidbody2D rigidRR = bulletRR.GetComponent<Rigidbody2D>();                                                             // GameObject 로 가져온 프리팹을 rigid로 초기화 
+                Rigidbody2D rigidCC = bulletCC.GetComponent<Rigidbody2D>();                                                             // GameObject 로 가져온 프리팹을 rigid로 초기화
+                Rigidbody2D rigidLL = bulletLL.GetComponent<Rigidbody2D>();                                                             // GameObject 로 가져온 프리팹을 rigid로 초기화
+                rigidRR.AddForce(Vector2.up * 10, ForceMode2D.Impulse);                                                                 // 위쪽 방향으로 이동
+                rigidCC.AddForce(Vector2.up * 10, ForceMode2D.Impulse);                                                                 // 위쪽 방향으로 이동
+                rigidLL.AddForce(Vector2.up * 10, ForceMode2D.Impulse);                                                                 // 위쪽 방향으로 이동
+                break;;
+        }
+
+          
+
+        curShotDelay = 0;                                                                               // 총알을 쏜 후에 장전 시간을 0으로 초기화 
+    }
+
+    // 총알 장전 함수 (딜레이)
+    void Reload()
+    {
+        curShotDelay += Time.deltaTime;         //  장전 시간에 현재 시간을 계속 더해 장전 시간을 나타냄 ( 장전 시간 초기화 필요 )
+    }
+
+    void Boom()
+    {
+        if (!Input.GetButton("Fire2"))
+            return;
+
+        if (isBoomTime)
+            return;
+
+        if (boomAmount == 0)
+            return;
+
+        boomAmount--;
+        isBoomTime = true;
+        gameManager.UpdateBoomIcon(boomAmount);
+
+
+        boom.SetActive(true);
+        Invoke("OffBoom", 2.0f);
+
+        // 적 파괴 
+        //GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
+        GameObject[] enemiesL = objectManager.GetPool("EnemyL");
+        GameObject[] enemiesM = objectManager.GetPool("EnemyM");
+        GameObject[] enemiesS = objectManager.GetPool("EnemyS");
+
+        for (int index = 0; index < enemiesL.Length; index++) {
+            if (enemiesL[index].activeSelf) {
+                Enemy enemyLogic = enemiesL[index].GetComponent<Enemy>();
+                enemyLogic.OnHit(100);
+            }          
+        }
+
+        for (int index = 0; index < enemiesM.Length; index++) {
+            if (enemiesM[index].activeSelf) {
+                Enemy enemyLogic = enemiesM[index].GetComponent<Enemy>();
+                enemyLogic.OnHit(100);
+            }
+        }
+
+        for (int index = 0; index < enemiesS.Length; index++) {
+            if (enemiesS[index].activeSelf) {
+                Enemy enemyLogic = enemiesS[index].GetComponent<Enemy>();
+                enemyLogic.OnHit(100);
+            }
+        }
+
+        // 총알 파괴 
+        //GameObject[] bullets = GameObject.FindGameObjectsWithTag("EnemyBullet");
+
+        GameObject[] bulletsA = objectManager.GetPool("BulletEnemyA");
+        GameObject[] bulletsB = objectManager.GetPool("BulletEnemyB");
+
+        for (int index = 0; index < bulletsA.Length; index++) {
+            //Destroy(bullets[index]);
+            if (bulletsA[index].activeSelf) {
+                bulletsA[index].SetActive(false);
+            }
+        }
+
+        for (int index = 0; index < bulletsB.Length; index++) {
+            //Destroy(bullets[index]);
+            if (bulletsB[index].activeSelf) {
+                bulletsB[index].SetActive(false);
+            }
+        }
+    }
+
+    // 충돌 확인 
+    void OnTriggerEnter2D(Collider2D collision)
+    {
+        // 충돌 확인 
+        if (collision.gameObject.tag == "Border"){
+            switch (collision.gameObject.name) {
+                case "Border_Top":
+                    isTouchTop = true;
+                    break;
+                case "Border_Bottom":
+                    isTouchBottom = true;
+                    break;
+                case "Border_Left":
+                    isTouchLeft = true;
+                    break;
+                case "Border_Right":
+                    isTouchRight = true;
+                    break;
+            }
+        }
+        else  if (collision.gameObject.tag == "Enemy" || collision.gameObject.tag == "EnemyBullet") {
+
+            power /= 2;
+            if (power <= 0)
+                power++;
+
+            if (isHit) 
+                return;
+
+            isHit = true;
+
+            life--;
+            gameManager.UpdateLifeIcon(life);
+            if(life < 1) {
+                gameManager.gameOver();
+            }
+            else {
+                gameManager.RespawnPlayer();
+            }
+
+            gameObject.SetActive(false);
+            //Destroy(collision.gameObject);
+            collision.gameObject.SetActive(false);
+
+        }
+        else if (collision.gameObject.tag == "Item") {
+            Item item = collision.gameObject.GetComponent<Item>();
+            switch (item.type) {
+                case "Coin":
+                    score += 200;
+                    break;
+                case "Boom":
+                    if (boomAmount == maxBoom)
+                        score += 100;
+                    else
+                        boomAmount++;
+                    gameManager.UpdateBoomIcon(boomAmount);
+                    break;
+                case "Power":
+                    if (power == maxPower)
+                        score += 100;
+                    else {
+                        power++;
+                        AddFollower();
+                    }
+                    break;
+            }
+            //Destroy(collision.gameObject);
+            collision.gameObject.SetActive(false);
+        }
+    }
+    void AddFollower()
+    {
+        if (power == 4)
+            followers[0].SetActive(true);
+        else if (power == 5)
+            followers[1].SetActive(true);
+        else if (power == 6)
+            followers[2].SetActive(true);
+    }
+
+    void OffBoom()
+    {
+        boom.SetActive(false);
+        isBoomTime = false;
+    }
+    // 충돌 후 이벤트 
+    void OnTriggerExit2D(Collider2D collision)
+    {
+        // 충돌 후 이동 
+        if (collision.gameObject.tag == "Border") {
+            switch (collision.gameObject.name) {
+                case "Border_Top":
+                    isTouchTop = false;
+                    break;
+                case "Border_Bottom":
+                    isTouchBottom = false;
+                    break;
+                case "Border_Left":
+                    isTouchLeft = false;
+                    break;
+                case "Border_Right":
+                    isTouchRight = false;
+                    break;
+            }
+        }
+    }
+}
