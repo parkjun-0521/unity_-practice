@@ -1,0 +1,72 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Follower : MonoBehaviour
+{
+    public float maxShotDelay;      // 총알 최대 딜레이 
+    public float curShotDelay;      // 총알 충전 딜레이  
+
+    public ObjectManager objectManager;
+
+    public Vector3 followPos;
+    public int followDelay;
+    public Transform parent;
+    public Queue<Vector3> parentPos;
+
+    void Awake()
+    {
+        parentPos = new Queue<Vector3>();
+    }
+
+    void Update()
+    {
+        Watch();
+        Follow();         // 이동 관련 함수 
+        Fire();         // 총알 관련 함수 
+        Reload();       // 총알 장전 함수 (딜레이)
+    }
+
+    void Watch()
+    {
+        // 부모 위치 값 저장
+        if (!parentPos.Contains(parent.position))
+            parentPos.Enqueue(parent.position);
+
+        // 부모 위치 값 출력 
+        if (parentPos.Count > followDelay)
+            followPos = parentPos.Dequeue();
+        else if (parentPos.Count < followDelay)
+            followPos = parent.position;
+    }
+
+    void Follow()
+    {
+        transform.position = followPos;
+    }
+
+    // 총알 관련 함수 
+    void Fire()
+    {
+        if (!Input.GetButton("Fire1"))                                          // Fire1 버튼을 누르지 않으면 return
+            return;
+
+        if (curShotDelay < maxShotDelay)                                        // 현재 장전 딜레이가 최대 딜레이 보다 커야 총알 발사 
+            return;
+
+        GameObject bullet = objectManager.MakeObj("BulletFollower");                                                             // Instantiate( 프리팹, 생성위치, 오브젝트 방향 ) 으로 총알 생성
+        bullet.transform.position = transform.position;
+
+        Rigidbody2D rigid = bullet.GetComponent<Rigidbody2D>();                                                                 // GameObject 로 가져온 프리팹을 rigid로 초기화 
+        rigid.AddForce(Vector2.up * 10, ForceMode2D.Impulse);                                                                   // 위쪽 방향으로 이동
+
+        curShotDelay = 0;                                                                               // 총알을 쏜 후에 장전 시간을 0으로 초기화 
+    }
+
+    // 총알 장전 함수 (딜레이)
+    void Reload()
+    {
+        curShotDelay += Time.deltaTime;         //  장전 시간에 현재 시간을 계속 더해 장전 시간을 나타냄 ( 장전 시간 초기화 필요 )
+    }
+
+}
