@@ -1,0 +1,192 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using System.IO;
+
+public class GameManager : MonoBehaviour {
+
+    //public GameObject[] enemyObjs;
+    public string[] enemyObjs;
+    public Transform[] spawnPoints;
+
+    public float nextSpawnDelay;      // Spawn 최대 딜레이 
+    public float curSpawnDelay;      // 현재 Spawn 딜레이   
+
+    public GameObject player;        // player 오브젝트 접근 
+
+    public Text scoreText;
+    public Image[] lifeImage;
+    public Image[] boomImage;
+ 
+    public GameObject gameOverSet;
+    public ObjectManager objectManager;
+
+
+    // 파일 읽기 관련 변수 
+    public List<Spawn> spawnList;
+    public int spawnIndex;
+    public bool spawnEnd;
+
+    void Awake()
+    {
+        spawnList = new List<Spawn>();
+        enemyObjs = new string[] { "EnemyL", "EnemyM", "EnemyS", "EnemyB" };
+        ReadSpawnFile();
+    }
+
+
+    void ReadSpawnFile()
+    {
+        // 변수 초기화 
+        spawnList.Clear();
+        spawnIndex = 0;
+        spawnEnd = false;
+
+        // 파일 열기  
+        TextAsset textFile = Resources.Load("Stage 0") as TextAsset;
+        StringReader stringReader = new StringReader(textFile.text);
+
+        while (stringReader != null) {
+            string line = stringReader.ReadLine();
+
+            Debug.Log(line);
+
+            if (line == null)
+                break;
+
+            // 파일 읽어 오기 
+            Spawn spawnData = new Spawn();   // 스폰의 구조체 가져오기  
+            spawnData.delay = float.Parse(line.Split(',')[0]);   //Parse 형변환    Split() 괄호안에 내가 메모장에서 구분 주었던 문자를 넣어주면 됨 
+            spawnData.type = line.Split(',')[1];
+            spawnData.point = int.Parse(line.Split(',')[2]);
+
+            spawnList.Add(spawnData);
+        }
+
+        // 파일 닫기 
+        stringReader.Close();
+
+        //nextSpawnDelay = spawnList[0].delay;
+    } 
+
+
+    void Update()
+    {
+        curSpawnDelay += Time.deltaTime;            // 소환 후 시간 초기화 필요
+
+        if (curSpawnDelay > nextSpawnDelay && !spawnEnd) {
+            SpawnEnemy();
+            //nextSpawnDelay = Random.Range(0.5f, 3f); // 0.5 ~ 3초 사이의 랜덤값으로 적 생성 
+            curSpawnDelay = 0;                       // 스폰 후 시간 초기화 
+        }
+
+        Player playerLogic = player.GetComponent<Player>();
+        scoreText.text = string.Format("{0:n0}", playerLogic.score);    // int형을 문자로 반환하고 3자리 마다 , 를 찍는 함수 => string.Format("{0:n0}", 값);
+    }
+
+    // 적 소환 
+    void SpawnEnemy()
+    {
+        //int randEnemy = Random.Range(0, 3);
+        int enemyIndex = 0;
+        switch (spawnList[spawnIndex].type) {
+            case "L":
+                enemyIndex = 0;
+                break;
+            case "M":
+                enemyIndex = 1;
+                break;
+            case "S":
+                enemyIndex = 2;
+                break;
+            case "B":
+                enemyIndex = 3;
+                break;
+        }
+
+        //int randPoint = Random.Range(0, 9);                     // 0 ~ n-1 사이의 랜덤 
+        int enemyPoint = spawnList[spawnIndex].point;
+
+        // 폴링 작업 한것으로 적 생성 
+        GameObject enemy = objectManager.MakeObj(enemyObjs[enemyIndex]);         //Instantiate(enemyObjs[randEnemy], spawnPoints[randPoint].position, spawnPoints[randPoint].rotation);         // 적 생성
+        //GameObject enemy = objectManager.MakeObj(enemyObjs[enemyIndex]);
+        enemy.transform.position = spawnPoints[enemyPoint].position;
+
+        Rigidbody2D rigid = enemy.GetComponent<Rigidbody2D>();
+        Enemy enemyLogic = enemy.GetComponent<Enemy>();                                                                                 // Enemy 스크립트 가져오기 
+        
+        enemyLogic.player = player;                                             // 적이 생성되었을 때는 플레이어 변수를 넘겨주는 것이 가능 
+                                                                                // 프리팹이 아직 생성 되지 않았을 때는 이미 생성된 오브젝트에 접근 하는것이 불가능 하므로 적이 생성되고 나서 접근하게 함 
+
+        enemyLogic.objectManager = objectManager;
+        // 적 이동 방향 조정 6,7,8,9 스폰 위치는 대각선으로 나머지는 직선으로 
+        if (enemyPoint == 5 || enemyPoint == 6) {                                 // 오른쪽 
+            rigid.velocity = new Vector2(enemyLogic.speed * (-1), -1);
+            enemy.transform.Rotate(Vector3.back * 67.5f);                       // 적 45도 회전 
+        }
+        else if (enemyPoint == 7 || enemyPoint == 8) {                            // 왼쪽 
+            rigid.velocity = new Vector2(enemyLogic.speed, -1);                 // 
+            enemy.transform.Rotate(Vector3.forward * 45);                       // 적 45도 회전 
+        }
+        else {                                                                  // 중앙 
+            rigid.velocity = new Vector2(0, enemyLogic.speed * (-1));
+        }
+
+        //리스폰 인덱스 증가
+        spawnIndex++;
+        if (spawnIndex == spawnList.Count) {
+            spawnEnd = true;
+            return;
+        }
+
+        //다음 리스폰 딜레이 갱신
+        nextSpawnDelay = spawnList[spawnIndex].delay;
+    }
+
+    public void UpdateLifeIcon(int life)
+    {
+        for (int index = 0; index < 3; index++) {
+            lifeImage[index].color = new Color(1, 1, 1, 0);
+        }
+
+        for (int index = 0; index < life; index++) {
+            lifeImage[index].color = new Color(1, 1, 1, 1);
+        }
+    }
+
+    public void UpdateBoomIcon(int boom)
+    {
+        for (int index = 0; index < 3; index++) {
+            boomImage[index].color = new Color(1, 1, 1, 0);
+        }
+
+        for (int index = 0; index < boom; index++) {
+            boomImage[index].color = new Color(1, 1, 1, 1);
+        }
+    }
+    public void RespawnPlayer()
+    {
+        Invoke("RespawnPlayerExe",2.0f);
+    }
+
+    void RespawnPlayerExe()
+    {
+        player.transform.position = Vector3.up * (-4.5f);
+        player.SetActive(true);
+
+        Player playerLogic = player.GetComponent<Player>();
+        playerLogic.isHit = false;
+    }
+
+    public void gameOver()
+    {
+        gameOverSet.SetActive(true);
+    }
+
+    public void ReTry()
+    {
+        SceneManager.LoadScene(0);
+    }
+}
