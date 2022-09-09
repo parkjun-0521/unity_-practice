@@ -1,0 +1,574 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Player : MonoBehaviour
+{
+    // 게임 매니저 
+    public GameManager manager;
+    
+    // 충돌 관련 변수 
+    bool isBorder;
+
+    // 이동 관련 변수 
+    float hAxis;            // 좌우 이동 키 변수 
+    float vAxis;            // 앞뒤 이동 키 변수 
+    bool wDown;             // 걷기 관련 이동 키 변수 
+    Vector3 moveVec;        // h,v 의 값을 저장 할 변수 
+
+    // 점프 
+    bool jDown;
+    bool isJump;
+
+    // 회피 
+    bool dDown;
+    bool isDodge;
+    Vector3 dodgeVec;
+
+    // 속도 
+    public float speed;
+
+    // 상호작용 
+    bool iDown;
+
+    // 플레이어 무기관련 변수 
+    public GameObject[] weapon;
+    public bool[] hasWeapons;
+
+    // 무기 변경 
+    bool sDown1;
+    bool sDown2;
+    bool sDown3;
+
+    bool isSwap;
+    int equipWeaponIndex = -1;
+
+    // 아이템 
+    public int ammo;
+    public int coin;
+    public int health;
+    
+
+    // 최대 아이템 
+    public int maxAmmo;
+    public int maxCoin;
+    public int maxHealth;
+    public int maxHasGrenades;
+
+    // 필살기 ( 수류탄 )
+    public GameObject[] grenades;
+    public int hasGrenades;
+    public GameObject grenadeObj;
+    bool gDown;
+
+    // 공격 
+    bool fDown;
+    float fireDelay;
+    bool isFireReady = true;
+
+    // 장전 
+    bool rDown; 
+    bool isReload;
+
+    // 무적 시간 
+    bool isDamage;
+
+    // 카메라 
+    public Camera followCamera;
+     
+    // 구매시 액션 제한 
+    bool isShop;
+
+    // 점수 관련 변수 
+    public int score;
+
+    // 사망시 
+    bool isDead;
+
+    // 물리효과 
+    Rigidbody rigid;
+
+    // 물질 효과 
+    MeshRenderer[] meshs;
+
+    // 애니메이션 
+    Animator anim;
+
+    // 아이템 저장 변수 
+    GameObject nearObject;
+    public Weapon equipWeapon;
+
+    void Awake()
+    {
+        // 변수 초기화
+        rigid = GetComponent<Rigidbody>();                   
+        anim = GetComponentInChildren<Animator>();
+        meshs = GetComponentsInChildren<MeshRenderer>();
+
+        // 기본 최고 점수 초기화  
+        PlayerPrefs.SetInt("MaxScore", 0);
+        Debug.Log(PlayerPrefs.GetInt("MaxScore"));      
+    }
+
+    
+    void Update()
+    {
+        GetInput();
+        Move();
+        Turn();
+        Jump();
+        Atteck();
+        GrenadeObj();
+        Reloade();
+        Dodge();
+        Swap();
+        Interation();
+    }
+
+    // input 관련 함수 
+    void GetInput()
+    {
+        hAxis = Input.GetAxisRaw("Horizontal");
+        vAxis = Input.GetAxisRaw("Vertical");
+        wDown = Input.GetButton("Walk");            // 버튼을 눌렀을 때 걷기 
+        jDown = Input.GetButtonDown("Jump");        // 점프 
+        fDown = Input.GetButton("Fire1");           // 공격 
+        gDown = Input.GetButtonDown("Fire2");       // 수류탄 
+        rDown = Input.GetButtonDown("Reloade");     // 장전
+        dDown = Input.GetButtonDown("Dodge");       // 회피
+        iDown = Input.GetButtonDown("Interation");  // 상호작용
+        sDown1 = Input.GetButtonDown("Swap1");      // 무기1 
+        sDown2 = Input.GetButtonDown("Swap2");      // 무기2
+        sDown3 = Input.GetButtonDown("Swap3");      // 무기3
+    }
+    // 이동 관련 함수 
+    void Move()
+    {
+        // 이동 
+        // 단위 백터로 만들어 대각선 이동 시 속도가 증가 하는 것을 방지 
+        // 단위 백터 => nomalized
+        moveVec = new Vector3(hAxis, 0, vAxis).normalized;              
+
+        // 무기 교체중 멈추기 , 공격중 이동 불가, 장전중 이동 불가 
+        if (isSwap || !isFireReady || isReload || isDead)
+            moveVec = Vector3.zero;
+
+        // 회피중 방향전환 막기 
+        if (isDodge)
+            moveVec = dodgeVec;
+
+        
+        // 벽 뚫기 방지 
+        if (!isBorder) { 
+            // 걸을 때 속도 감소 
+            // if문 대신 3항연산자 사용 가능 => transform.position += moveVec * speed * (wDown ? 0.3f : 1f) * Time.deltaTime;
+            if (wDown)
+                // 걷는 키를 눌렀다면 속도 감소 
+                // 속도를 0으로 주지 않아 이동 하는 애니메이션은 계속 작동 
+                transform.position += moveVec * speed * 0.3f * Time.deltaTime;
+            else
+                // 그렇지 않을 시 일반 속도 
+                transform.position += moveVec * speed * Time.deltaTime;
+        }
+            
+
+        // 애니메이션
+        anim.SetBool("isRun", moveVec != Vector3.zero);
+        anim.SetBool("isWalk", wDown);
+    }
+
+    // 회전 관련 함수 
+    void Turn()
+    {
+        // 회전 구현 
+        // Player가 보는 방향으로 회전 
+        transform.LookAt(transform.position + moveVec);                 
+
+        // 마우스에 의한 회전 
+        if (fDown && !isDead) {
+            // ScreenPointToRay => 스크린에서 월드로 Ray를 쏘는 함수 
+            // 마우스로 누른 곳으로 레이를 쏘는 것 
+            Ray ray = followCamera.ScreenPointToRay(Input.mousePosition);
+
+            // ray를 가져온 것을 활용 
+            RaycastHit rayHit;
+            if (Physics.Raycast(ray, out rayHit, 100)) {
+                // rayHit.point => 레이가 닿은 부분을 말함 
+                Vector3 nextVec = rayHit.point - transform.position;
+
+                // 부피가 있는 오브젝트를 클릭시 위쪽을 보는것을 방지하기 위해 y 좌표 고정 
+                nextVec.y = 0;
+                transform.LookAt(transform.position + nextVec);
+            }
+        }
+    }
+
+    // 점프 관련 함수 
+    void Jump()
+    {
+        // 2단 점프, 회피 중, 무기 교체중, 죽었을 때 에는 점프가 안되도록 막는다. 
+        if (jDown && !isJump && !isDodge && !isSwap && !isDead) {
+            // 실제 점프 힘 
+            rigid.AddForce(Vector3.up * 15, ForceMode.Impulse);
+
+            // 애니메이션 
+            anim.SetBool("isJump",true);
+            anim.SetTrigger("doJump");
+
+            // 무한 점프 막기 위한 bool 선언 
+            isJump = true;
+        }
+    }
+
+    // 기본 공격 
+    void Atteck()
+    {
+        // 근접 무기가 아닐 때 예외 처리 
+        if (equipWeapon == null)
+            return;
+
+        // 근접 공격 텀 
+        fireDelay += Time.deltaTime;
+
+        // fireDelay 근접 무기 딜레이 시간 보다 클경우 
+        isFireReady = equipWeapon.rate < fireDelay;
+
+        // 근접 공격 로직 
+        if(fDown && isFireReady && !isDodge && !isSwap && !isShop && !isDead) {
+            // weapon 스크립트의 Use() 함수를 가져와 공격을 시작 
+            equipWeapon.Use();
+
+            // 애니메이션 ( 근접과 원거리 공격 시 달라진다 ) 
+            anim.SetTrigger(equipWeapon.type == Weapon.Type.Melee ? "doSwing" : "doShot");
+
+            // 공격을 했으면 근접공격 딜레이를 0으로 초기화 
+            fireDelay = 0;
+        }
+    }
+
+    // 수류탄 관련 함수
+    void GrenadeObj()
+    {
+        // 수류탄이 없을 때 
+        if (hasGrenades == 0)
+            return;
+
+        // 장전, 무기교체, 죽었을 때 수류탄을 던지지 못하도록 제약사항 만들기 
+        if (gDown && !isReload && !isSwap && !isDead) {
+            // 마우스 포인터 위치의 레이값을 저장
+            Ray ray = followCamera.ScreenPointToRay(Input.mousePosition);
+            RaycastHit rayHit;
+            if (Physics.Raycast(ray, out rayHit, 100)) {
+                Vector3 nextVec = rayHit.point - transform.position;
+                nextVec.y = 20;
+
+                // 수류탄 프리팹 불러오기  
+                GameObject instanGrenade = Instantiate(grenadeObj, transform.position, transform.rotation);
+                Rigidbody rigidGrenade = instanGrenade.GetComponent<Rigidbody>();
+
+                // 힘과 회전력 
+                rigidGrenade.AddForce(nextVec, ForceMode.Impulse);
+                rigidGrenade.AddTorque(Vector3.back * 10, ForceMode.Impulse);
+
+                // 수류탄을 던질 시 player 주변 오브젝트 1개 비활성화 
+                hasGrenades--;
+                grenades[hasGrenades].SetActive(false);
+            }
+        }
+    }
+
+    // 장전 관련 함수 
+    void Reloade()
+    {
+        // 무기가 없을 때 제약사항 두기 
+        if (equipWeapon == null)
+            return;
+
+        // 근접 무기를 들고 있을때 제약사항 
+        if (equipWeapon.type == Weapon.Type.Melee)
+            return;
+
+        // 탄창이 0일 때 제약 사항 
+        if (ammo == 0)
+            return;
+
+        // 점프, 회피, 무기교체, 총발 발사 시, 상점 들어갈 시, 죽었을 시 에 장전을 안되도록 제약 사항 추가 
+        if(rDown && !isJump && !isDodge && !isSwap && isFireReady && !isShop && !isDead) {
+            anim.SetTrigger("doReload");
+            isReload = true;
+
+            Invoke("ReloadOut", 2f);
+        }
+    }
+
+    // 재장전 후 탄창 수 조절 
+    void ReloadOut()
+    {
+        int reAmmo = ammo < equipWeapon.maxAmmo ? ammo : equipWeapon.maxAmmo;
+        if (ammo < equipWeapon.maxAmmo)
+            ammo -= reAmmo;
+        else
+            ammo -= (equipWeapon.maxAmmo - equipWeapon.curAmmo);
+        equipWeapon.curAmmo = reAmmo;
+
+        isReload = false;
+    }
+
+    // 회피 관련 함수 
+    void Dodge()
+    {
+        // 회피, 무기교체, 죽었을 때 에는 회피가 안되도록 설정. 단, 점프 도중 회피는 가능 
+        if (dDown && !isDodge && !isSwap && !isDead) {
+            // 회피시 방향전환 막기 
+            // 회피백터 -> 움직임 백터
+            dodgeVec = moveVec;
+
+            // 회피 시 속도 증가 
+            speed *= 2;
+
+            // 애니메이션 
+            anim.SetTrigger("doDodge");
+
+            // 무한 회피 막기 
+            isDodge = true;
+
+            // 0.8 초 간격으로 회피가 가능하도록 변경   
+            Invoke("DodgeOut", 0.8f);
+        }
+    }
+
+    // 회피가 다시 가능한 상태로 만드는 함수 
+    void DodgeOut()
+    {
+        // 회피 후 속도 원상 복귀 
+        speed *= 0.5f;
+
+        // 무한 회피를 막기위한 bool 변수 원상복귀 
+        isDodge = false;
+    }
+
+    // 무기 교체  
+    void Swap()
+    {
+        // 같은 무기를 눌렀을 때 교체가 일어나지 않도록 제약사항을 둠
+        // 무기를 상호작용으로 얻지 않을 경우 무기가 나오지 않도록 제약상을 둠 
+        if (sDown1 && (!hasWeapons[0] || equipWeaponIndex == 0))
+            return;
+        if (sDown2 && (!hasWeapons[1] || equipWeaponIndex == 1))
+            return;
+        if (sDown3 && (!hasWeapons[2] || equipWeaponIndex == 2))
+            return;
+
+        // 무기 배열에 사용하기 위해 value 값 지정 
+        int weaponIndex = -1;
+        if (sDown1) weaponIndex = 0;
+        if (sDown2) weaponIndex = 1;
+        if (sDown3) weaponIndex = 2;
+
+        // 무기 교체시 제약사항 
+        if ((sDown1 || sDown2 || sDown3) && !isJump && !isDodge && !isDead) {
+            // 다른 무기로 교체시 이전 무기 오브젝트는 비활성화
+            if (equipWeapon != null)
+                equipWeapon.gameObject.SetActive(false);
+
+            // 같은 무기 교체할때 교체되지않도록 제약사항 추가 
+            equipWeaponIndex = weaponIndex;
+
+            // 무기 번호 1,2,3 을 누를시 각 오브젝트 활성화 
+            equipWeapon = weapon[weaponIndex].GetComponent<Weapon>();
+            equipWeapon.gameObject.SetActive(true);
+
+            // 애니메이션 추가 
+            anim.SetTrigger("doSwap");
+
+            // 교체 중이라는 사실을 알림
+            isSwap = true;
+            Invoke("SwapOut", 0.4f);
+        }
+    }
+
+    void SwapOut()
+    {
+        isSwap = false;
+    }
+
+    // (E)상호작용 시 
+    void Interation()
+    { 
+        if (iDown && nearObject != null && !isJump && !isDodge && !isDead) {
+            // Item스크립트에서 weapon에게 주었던 value 값을 활용하여 hasWeapons 를 활성화 
+            // 무기일 때 
+            if (nearObject.tag == "Weapon") {
+                Item item = nearObject.GetComponent<Item>();
+                int weaponIndex = item.value;
+                hasWeapons[weaponIndex] = true;
+
+                // 상호작용후 오브젝트 파괴 
+                Destroy(nearObject);
+            }
+            // 상점 일 때 
+            else if (nearObject.tag == "Shop") {
+                Shop shop = nearObject.GetComponent<Shop>();
+                // Enter 함수에는 Player를 넣어줘야 하므로 this를 사용하여 함수에 데이저 전달 
+                shop.Enter(this);
+                isShop = true;
+            }
+        }
+    }
+
+    // 자동적인 회전 막기 ( 오브젝트를 밟으면 회전이 일어나는 것을 방지 ) 
+    void FixedUpdate()
+    {
+        FreezeRotation();
+        StopToWall();
+    }
+
+    void FreezeRotation()
+    {
+        // 회전 방지 
+        rigid.angularVelocity = Vector3.zero;       // 회전 속도를 0으로 만듬 
+    }
+
+    // 벽을 뚫지 못하도록 
+    void StopToWall()
+    {
+        // Ray를 쏴서 앞에 벽을 확인 
+        Debug.DrawRay(transform.position, transform.forward * 5, Color.green);
+
+        // Ray 값을 변수에 저장 
+        isBorder = Physics.Raycast(transform.position, transform.forward, 5, LayerMask.GetMask("Wall"));
+    }
+ 
+    // 충돌 관련 함수 
+    void OnCollisionEnter(Collision collision)
+    {
+        // 바닥에 닿을 시 점프를 할 수 있게 함 
+        if (collision.gameObject.tag == "Floor") {
+            // 애니메이션 
+            anim.SetBool("isJump", false);
+
+            // 바닥에 닿았다 를 확인 
+            isJump = false;
+        }
+    }
+
+    // 아이템 입수 
+    void OnTriggerEnter(Collider other)
+    {
+        if(other.tag == "Item") {
+            // 아이템 스크립트 가져오기 
+            Item item = other.GetComponent<Item>();
+            switch (item.type) {
+                case Item.Type.Ammo:
+                    ammo += item.value;
+                    if (ammo > maxAmmo)
+                        ammo = maxAmmo;
+                    break;
+                case Item.Type.Coin:
+                    coin += item.value;
+                    if (coin > maxCoin)
+                        coin = maxCoin;
+                    break;
+                case Item.Type.Heart:
+                    health += item.value;
+                    if (health > maxHealth)
+                        health = maxHealth;
+                    break;
+                case Item.Type.Grenade:
+                    grenades[hasGrenades].SetActive(true);
+                    hasGrenades += item.value;
+                    if (hasGrenades > maxHasGrenades)
+                        hasGrenades = maxHasGrenades;
+                    break;
+            }
+
+            // 아이템 입수 후 오브젝트 파괴
+            Destroy(other.gameObject);
+        }
+        // 적 총알에 데미지를 입을 시 
+        else if(other.tag == "EnemyBullet") {
+            if (!isDamage) {
+                Bullet enemyBullet = other.GetComponent<Bullet>();
+
+                // 점프공격을 맞았을 떄 
+                bool isBossAtk = other.name == "Boss Melee Area";
+                StartCoroutine(OnDamage(isBossAtk));
+                health -= enemyBullet.damage;
+
+            }
+
+            // Rigidbody를 가지고 있는 오브젝트와 충돌시 그 오브젝트 파괴 
+            if (other.GetComponent<Rigidbody>() != null)
+                Destroy(other.gameObject);
+        }
+    }
+
+    // player가 피해를 입을 시 
+    IEnumerator OnDamage(bool isBossAtk)
+    {
+        // 무적을 위한 bool 변수
+        isDamage = true;
+
+        // 피격을 입을 시 노란색으로 변경 
+        foreach(MeshRenderer mesh in meshs) {
+            mesh.material.color = Color.yellow;
+        }
+
+        // 점프공격을 맞았을 때 뒤로 밀려나기 
+        if (isBossAtk)
+            rigid.AddForce(transform.forward * -25, ForceMode.Impulse);
+
+        // player 무적 시간 1초 
+        yield return new WaitForSeconds(1f);
+
+        // 죽었을 때 
+        if (health <= 0 && !isDead)
+            OnDie();
+
+        // 무적을 위한 bool 변수 
+        isDamage = false;
+
+        // 무적 1초 뒤에 다시 흰색으로 변경 
+        foreach (MeshRenderer mesh in meshs) {
+            mesh.material.color = Color.white;
+        }
+
+        // 근접공격을 맞고 속도를 원래대로 돌려놓기 
+        if (isBossAtk)
+            rigid.velocity = Vector3.zero;
+        
+    }
+
+    void OnDie()
+    {
+        anim.SetTrigger("doDie");
+        isDead = true;
+        manager.GameOver();
+    }
+
+    // 무기 입수 관련 함수 
+    void OnTriggerStay(Collider other)
+    {
+        // 현재 닿은 무기와 상점을 변수에 저장 
+        if(other.tag == "Weapon" || other.tag == "Shop") {
+            nearObject = other.gameObject;
+        }
+        //Debug.Log(nearObject.name);
+    }
+
+    void OnTriggerExit(Collider other)
+    {
+        if (other.tag == "Weapon") {
+            nearObject = null;
+        }
+        // 상점에서 나갈 때 
+        else if(other.tag == "Shop") {
+            Shop shop = nearObject.GetComponent<Shop>();
+
+            // Exit 함수 작동 
+            shop.Exit();
+            isShop = false;
+            nearObject = null;
+        }
+    }
+}
