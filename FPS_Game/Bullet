@@ -1,0 +1,28 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Bullet : MonoBehaviour
+{
+    
+    public int damage;      // 데미지 변수 
+    public bool isMelee;    // 근접무기 확인 변수 
+    public bool isRock;     // Rock 공격 확인 변수 
+
+    void OnCollisionEnter(Collision collision)
+    {
+        // 바닥과 충돌하면 오브젝트 파괴 ( 탄피가 바닥과 충돌시 0.5초 뒤에 파괴 ) 
+        // Rock 공격이 아닐때 
+        if(!isRock && collision.gameObject.tag == "Floor") {
+            Destroy(gameObject, 0.5f);
+       }
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        // 벽에 닿을 시 바로 파괴 ( 총알이 벽에 닿을 시 바로 파괴 )
+        if (!isMelee && other.gameObject.tag == "Wall") {
+            Destroy(gameObject);
+        }
+    }
+}
