@@ -1,0 +1,95 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Weapon : MonoBehaviour
+{
+    // 무기 타입, 속성 관련 변수 
+    public enum Type { Melee, Range};       // 타입은 두가지 
+    public Type type;                       // 타입 저장 변수 
+    public int damage;                      // 데미지 변수 
+    public float rate;                      // 공격 속도 변수 
+    public BoxCollider meleeArea;           // 근접 무기 충돌 범위 
+    public TrailRenderer trailEffect;       // 공격시 이펙트 활성화 
+
+    // 총알 관련 
+    public Transform bulletPos;             // 총알 위치 ( 총알이 나가는 힘 ) 
+    public GameObject bullet;               // 총알 오브젝트 
+    public Transform bulletCasePos;         // 탄약 
+    public GameObject bulletCase;           // 탄약 오브젝트 
+
+    // 탄창
+    public int maxAmmo;
+    public int curAmmo;
+
+
+    public void Use()
+    {
+        if(type == Type.Melee) {
+            StopCoroutine("Swing");     // 코루틴 스탑 
+            StartCoroutine("Swing");    // 코루틴 시작 
+        }
+        else if (type == Type.Range && curAmmo > 0) {
+            curAmmo--;
+            StartCoroutine("Shot");    // 코루틴 시작 
+        }
+    }
+
+    // 코루틴 ( 일정 간격을 두고 함수를 실행 할 수 있다 )
+    // 코루틴에는 yield return 이 꼭 필요하다. 
+    // 이펙트를 껐다, 켰다
+    IEnumerator Swing()
+    {
+        // 1 
+        yield return new WaitForSeconds(0.2f);      // WaitForSeconds() => 주어진 수치만큼 기다리는 함수 ( 0.1초 대기 )
+        // 콜라이더와 이펙트 활성화 
+        meleeArea.enabled = true;
+        trailEffect.enabled = true;
+
+        // 2 
+        // 코루틴 기본은 null이다, yield return null은 1프레임 대기 ( 여러개를 작성하여 시간차 로직 작성 가능 ) 
+        yield return new WaitForSeconds(0.3f);      
+        meleeArea.enabled = false;
+
+        // 3 
+        yield return new WaitForSeconds(0.3f);
+        trailEffect.enabled = false;
+
+        // 코루틴 탈출 
+        // yield break;
+    }
+
+    // 총알 발사 코루틴 구현 
+    IEnumerator Shot()
+    {
+        // 총알 발사
+        // 총알 프리펩 생성하기 
+        GameObject intantBullet = Instantiate(bullet, bulletPos.position, bulletPos.rotation);
+        Rigidbody bulletRigid = intantBullet.GetComponent<Rigidbody>();
+
+        // 총알의 속도 
+        bulletRigid.velocity = bulletPos.forward * 50;
+
+        // 1프레임 간격 
+        yield return null; 
+
+        // 탄피 배출 
+        // 탄피 프리펩 생성 
+        GameObject intantCase = Instantiate(bulletCase, bulletCasePos.position, bulletCasePos.rotation);
+        Rigidbody caseRigid = intantCase.GetComponent<Rigidbody>();
+
+        // 탄피 배출 방향 및 속도 ( 속도는 랜덤 값으로 주었다 )
+        Vector3 caseVec = bulletCasePos.forward * Random.Range(-3, -2) + Vector3.up * Random.Range(2, 3);
+
+        // 가속도 및 회전력 추가 
+        caseRigid.AddForce(caseVec, ForceMode.Impulse);
+        caseRigid.AddTorque(Vector3.up * 10, ForceMode.Impulse);
+
+    }
+
+    // 함수의 진행 방향 
+    // Use() 메인루틴 -> Swing() 서브루틴 -> Use() 메인루틴 
+
+    // 코루틴 
+    // Use() 메인루틴 + Swing() 코루틴 (Co-Op)  동시에 실행 
+}
