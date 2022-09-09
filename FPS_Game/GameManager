@@ -1,0 +1,286 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+
+public class GameManager : MonoBehaviour
+{
+    // 상점 관련 변수 
+    public GameObject itemShop;
+    public GameObject weaponShop;
+    public GameObject startZone;
+
+    // 카메라 변수 
+    public GameObject menuCam;
+    public GameObject gameCam;
+
+    // player 및 enemy 오브젝트 변수 
+    public Player player;
+    public Boss boss;
+    public int enemyCntA;
+    public int enemyCntB;
+    public int enemyCntC;
+    public int enemyCntD;
+
+    // 스테이지, 시간, 전투 중인가 
+    public int stage;
+    public float playTime;
+    public bool isBattle;
+
+    // 리스폰 존 
+    public Transform[] enemyZone;
+    public GameObject[] enemies;
+    public List<int> enemyList;
+
+    // UI 패널 변수 
+    public GameObject menuPanel;
+    public GameObject gamePanel;
+    public GameObject overPanel;
+
+    // 메뉴 화면 변수 
+    public Text maxScoreTxt;
+
+    // 인게임 화면 변수 
+    public Text scoreTxt;
+    public Text stageTxt;
+    public Text playTimeTxt;
+    public Text playerHealthTxt;
+    public Text playerAmmoTxt;
+    public Text playerCoinTxt;
+
+    // 인게임 무기 이미지 
+    public Image weapon1Img;
+    public Image weapon2Img;
+    public Image weapon3Img;
+    public Image weaponRImg;
+
+    // 인게임 enemy 이미지 
+    public Text enemyATxt;
+    public Text enemyBTxt;
+    public Text enemyCTxt;
+
+    // 인게임 boss 체력 
+    public RectTransform bossHealthGroup;
+    public RectTransform bossHealthBar;
+
+    // 점수 관련 
+    public Text curScoreText;
+    public Text bestText;
+    void Awake()
+    {
+        // enemy 리스트 선언 
+        enemyList = new List<int>();
+
+        // string.Format => 문자의 양식을 지정 가능 
+        // {0:n0} => 1000의 자리에서 , 추가 
+        maxScoreTxt.text = string.Format("{0:n0}", PlayerPrefs.GetInt("MaxScore"));
+
+        if (PlayerPrefs.HasKey("MaxScore")) {
+            PlayerPrefs.SetInt("MaxScore", 0);
+        }
+    }
+
+    // 게임 스타드 함수 
+    // game start 버튼의 OnClick() 이벤트에 적용 
+    public void GameStart()
+    {
+        // 카메라 비활성화 및 활성화 
+        menuCam.SetActive(false);               // 메인 카메라 비활성화 
+        gameCam.SetActive(true);                // 인게임 카메라 활성화 
+
+        // 판낼 비활성화 및 활성화  
+        menuPanel.SetActive(false);             // 메뉴 UI 비활성화   
+        gamePanel.SetActive(true);              // 인게임 UI 활성화 
+
+        // 플레이어 활성화 
+        player.gameObject.SetActive(true);      // Player 활성화 
+    }
+
+    // 스테이지 시작 
+    public void StageStart()
+    {
+        // 상점 비활성화 
+        itemShop.SetActive(false);
+        weaponShop.SetActive(false);
+        startZone.SetActive(false);
+
+        // 몬스터 스폰 위치 활성화 
+        foreach (Transform zone in enemyZone)
+            zone.gameObject.SetActive(true);
+
+        // 전투 중이라는 bool 변수 ture 변경 
+        isBattle = true;
+
+        // 전투 코루틴 
+        StartCoroutine(InBattle());
+    }
+
+    public void GameOver()
+    {
+        gamePanel.SetActive(false);
+        overPanel.SetActive(true);
+        curScoreText.text = scoreTxt.text;
+
+        // 최고 점수 기록 갱신 
+        int maxScore = PlayerPrefs.GetInt("MaxScore");
+        
+        // 현재 점수가 maxScore 보다 높다면 text 변경 
+        if(player.score > maxScore) {
+            bestText.gameObject.SetActive(true);
+            PlayerPrefs.SetInt("MaxScore", player.score);
+        }
+    }
+
+    public void Restart()
+    {
+        // 재시작 시 씬 불러오기 
+        SceneManager.LoadScene(0);
+    }
+
+    public void StageEnd()
+    {
+
+        player.transform.position = Vector3.up * 0.8f;
+
+        // 스테이지 종료시 상점 활성화 
+        itemShop.SetActive(true);
+        weaponShop.SetActive(true);
+        startZone.SetActive(true);
+
+        // 적 스폰존 비활성화 
+        foreach (Transform zone in enemyZone)
+            zone.gameObject.SetActive(false);   
+
+        // 전투 중 bool 변수를 false로 변경 
+        isBattle = false;
+
+        // 스테이지 1 증가 
+        stage++;
+    }
+
+    IEnumerator InBattle()
+    {
+        // 5의 배수 스테이지 마다 보스 등장 
+        if (stage % 5 == 0) {
+            enemyCntD++;
+
+            // 보스 프리팹 가져오기 
+            GameObject instantEnemy = Instantiate(enemies[3], enemyZone[0].position, enemyZone[0].rotation);
+            Enemy enemy = instantEnemy.GetComponent<Enemy>();
+            enemy.target = player.transform;
+            enemy.manager = this;
+            boss = instantEnemy.GetComponent<Boss>();
+        }
+        // 일반 스테이지 
+        else {
+            for (int index = 0; index < stage; index++) {
+                // 랜덤으로 적을 지정  
+                int ran = Random.Range(0, 3);
+                enemyList.Add(ran);
+
+                switch (ran) {
+                    case 0:
+                        enemyCntA++;
+                        break;
+                    case 1:
+                        enemyCntB++;
+                        break;
+                    case 2:
+                        enemyCntC++;
+                        break;
+                }
+            }
+
+            // enemy 스폰 
+            while (enemyList.Count > 0) {
+                // 랜덤 스폰 존 지정 
+                int ranZone = Random.Range(0, 4);
+
+                // 적 프리팹은 가장 처음 list에 있는 것을 가져오고 프리팹을 랜덤 위치에 생성 
+                GameObject instantEnemy = Instantiate(enemies[enemyList[0]], enemyZone[ranZone].position, enemyZone[ranZone].rotation);
+                Enemy enemy = instantEnemy.GetComponent<Enemy>();
+
+                // 프리팹은 Scene에 접근 할 수 없다 
+                // 따라서 target은 직접 지정해 주어야 한다.
+                // target을 player 위치로 지정 
+                enemy.target = player.transform;
+                enemy.manager = this;
+
+                // 소환 후에 데이터는 삭제 
+                enemyList.RemoveAt(0);
+
+                // 코루틴의 while 문에는 꼭 필요 
+                yield return new WaitForSeconds(ranZone);
+            }
+        }
+
+        // 적이 다 죽으면 while문을 나감 
+        while (enemyCntA + enemyCntB + enemyCntC+ enemyCntD > 0) {
+            yield return null;
+        }
+
+        // 그리고 4초후 스테이지를 나감 
+        yield return new WaitForSeconds(4f);
+        boss = null;
+        StageEnd();
+    }
+
+    void Update()
+    {
+        if (isBattle)
+            playTime += Time.deltaTime;
+    }
+
+    void LateUpdate()
+    {
+        // 점수, 스테이지 
+        scoreTxt.text = string.Format("{0:n0}", player.score);
+        stageTxt.text = "STAGE " + stage;
+
+        // 플레이 타임 시:분:초 로 나누기  
+        int hour = (int)(playTime / 3600);
+        int min = (int)((playTime - (hour * 3600)) / 60);
+        int second = (int)(playTime % 60);
+
+        // 시간을 두자리씩 표현 
+        playTimeTxt.text = string.Format("{0:00}", hour) + ":" + string.Format("{0:00}", min) + ":" + string.Format("{0:00}", second);
+
+        // 체력, 코인 Text 변경 
+        playerHealthTxt.text = player.health + " / " + player.maxHealth;
+        playerCoinTxt.text = string.Format("{0:n0}", player.coin);
+
+        // 탄약의 Text 변경 
+        if (player.equipWeapon == null)
+            playerAmmoTxt.text = "- / " + player.ammo;
+        else if (player.equipWeapon.type == Weapon.Type.Melee)
+            playerAmmoTxt.text = "- / " + player.ammo;
+        else
+            playerAmmoTxt.text = player.equipWeapon.curAmmo + " / " + player.ammo;
+
+        // 무기 이미지의 알파 값 변경 
+        // 무기를 먹었을 때 이미지 활성화
+        weapon1Img.color = new Color(1, 1, 1, player.hasWeapons[0] ? 1 : 0);
+        weapon2Img.color = new Color(1, 1, 1, player.hasWeapons[1] ? 1 : 0);
+        weapon3Img.color = new Color(1, 1, 1, player.hasWeapons[2] ? 1 : 0);
+        weaponRImg.color = new Color(1, 1, 1, player.hasGrenades > 0 ? 1 : 0);
+
+        // 몬스터 숫자 
+        enemyATxt.text = enemyCntA.ToString();
+        enemyBTxt.text = enemyCntB.ToString();
+        enemyCTxt.text = enemyCntC.ToString();
+
+        // 보스 체력 
+        // 보스가 있을 때만 
+        if(boss != null) {
+            bossHealthGroup.anchoredPosition = Vector3.down * 1;
+
+            // 백분위로 나누어 체력바 계산 
+            bossHealthBar.localScale = new Vector3((float)boss.curHealth / boss.maxHealth, 1, 1);
+        }
+        else {
+            // 보스 스테이지가 아닐 경우 위로 200 만큼 올림 
+            bossHealthGroup.anchoredPosition = Vector3.up * 200;
+        }
+    }
+}
