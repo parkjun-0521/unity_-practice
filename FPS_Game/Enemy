@@ -1,0 +1,322 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.AI;
+
+public class Enemy : MonoBehaviour
+{
+    // 적 구별 
+    public enum Type { A, B, C, D };
+    public Type enemyType;
+
+    // 체력 관련 
+    public int maxHealth;
+    public int curHealth;
+
+    // AI 기능 관련 변수 
+    public Transform target;
+    public NavMeshAgent nav;
+
+    public bool isChase;
+    public bool isAttack;
+
+    // 죽었을 때 
+    public bool isDead;
+
+    // 원거리 공격 
+    public GameObject bullet;
+
+    // 콜라이더 변수 
+    public BoxCollider meleeArea;
+
+    // 물리 구현 변수 
+    public Rigidbody rigid;
+    public BoxCollider boxCollider;
+
+    // 물질 관련 ( 모든 피격 이벤트를 가져오기 위해 ) 
+    public MeshRenderer[] meshs;
+
+    // 애니메이션 관련 
+    public Animator anim;
+
+    // 점수 관련 변수 
+    public int score;
+
+    // 드랍 
+    public GameObject[] coins;
+
+    // 게임매니저 관련 
+    public GameManager manager;
+
+    void Awake()
+    {
+        // 변수 초기화 
+        rigid = GetComponent<Rigidbody>();
+        boxCollider = GetComponent<BoxCollider>();
+        meshs = GetComponentsInChildren<MeshRenderer>();
+        nav = GetComponent<NavMeshAgent>();
+        anim = GetComponentInChildren<Animator>();
+
+        // 보스가 아닐때만 로직 실행 
+        if(enemyType != Type.D)
+            Invoke("ChaseStart", 2);
+    }
+
+    void ChaseStart()
+    {
+        isChase = true;
+        anim.SetBool("isWalk", true);
+    }
+
+    // AI 처럼 Player 따라다니도록 움직이기 
+    void Update()
+    {
+        // nav mesh agent 추가 후 코드 작성 
+        // 보스는 움직이지 않도록 설정 
+        if (nav.enabled && enemyType != Type.D) {
+            nav.SetDestination(target.position);
+            // 정지 
+            nav.isStopped = !isChase;
+        }
+    }
+
+    // player 타겟팅 함수 
+    void Targerting()
+    {
+        if (!isDead && enemyType != Type.D) {
+            float targetRadius = 0;
+            float targetRange = 0;
+
+            // 각 몬스터의 Pay 범위 설정 
+            switch (enemyType) {
+                case Type.A:
+                    targetRadius = 1.5f;
+                    targetRange = 3f;
+                    break;
+                case Type.B:
+                    targetRadius = 1f;
+                    targetRange = 6f;
+                    break;
+                case Type.C:
+                    targetRadius = 0.5f;
+                    targetRange = 25f;
+                    break;
+            }
+            RaycastHit[] rayHits = Physics.SphereCastAll(transform.position, targetRadius, transform.forward, targetRange, LayerMask.GetMask("Player"));
+
+            // Ray값에 player가 들어오면 공격 시작 
+            // 공격 중이면 연달아 공격을 하지 못하게 제약 추가 
+            if (rayHits.Length > 0 && !isAttack) {
+                StartCoroutine(Attack());
+            }
+        }
+    }
+
+    IEnumerator Attack()
+    {
+        isChase = false;
+        isAttack = true;
+        anim.SetBool("isAttack", true);
+
+        // 각 적의 공격 방식 
+        switch (enemyType) {
+            // 기본 적 
+            case Type.A:
+
+                yield return new WaitForSeconds(0.2f);
+                meleeArea.enabled = true;
+
+                yield return new WaitForSeconds(1f);
+                meleeArea.enabled = false;
+
+                yield return new WaitForSeconds(1f);
+
+                break;
+            // 돌진 하는 적 
+            case Type.B:
+
+                yield return new WaitForSeconds(0.1f);
+
+                // 돌진 속도 및 피격 collider Box 활성화 
+                rigid.AddForce(transform.forward * 20, ForceMode.Impulse);
+                meleeArea.enabled = true;
+
+                yield return new WaitForSeconds(0.5f);
+
+                // 돌진 후 속도를 0으로 및 피격 collider Box 비활성화 
+                rigid.velocity = Vector3.zero;
+                meleeArea.enabled = false;
+
+                yield return new WaitForSeconds(2f);
+
+                break;
+            // 미사일 발사하는 적 
+            case Type.C:
+
+                yield return new WaitForSeconds(0.5f);
+
+                // 총알 프리팹 생성 
+                GameObject instantBullet = Instantiate(bullet, transform.position, transform.rotation) ;
+                Rigidbody rigidBullet = instantBullet.GetComponent<Rigidbody>();
+
+                // 총알 발사 속도 
+                rigidBullet.velocity = transform.forward * 20;
+
+                yield return new WaitForSeconds(2f);
+                break;
+        }
+        
+        isChase = true;
+        isAttack = false;
+        anim.SetBool("isAttack", false);
+    }
+
+    void FixedUpdate()
+    {
+        Targerting();
+        FreezeVelocity();
+    }
+
+    void FreezeVelocity()
+    {
+        // 충돌시 velocity에 의해 적이 player에게 다가가지 못하는것을 막기 위해 
+        // 충돌시 속도및 회전을 0으로 만듬 
+        if (isChase) {
+            rigid.velocity = Vector3.zero;
+            rigid.angularVelocity = Vector3.zero;
+        }
+    }
+
+    // 무기에 충돌시 로직 처리 
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.tag == "Melee") {
+            // weapon 스크립트 불러오기 
+            Weapon weapon = other.GetComponent<Weapon>();
+
+            // 무기에 맞을 시 체력 감소 
+            curHealth -= weapon.damage;
+
+            // 죽었을 시 뒤로 넉백  
+            Vector3 reactVec = transform.position - other.transform.position;
+
+            // false 값을 주어 수류탄이 아니란것을 확인 
+            StartCoroutine(OnDamage(reactVec, false));
+
+            Debug.Log("Melle : " + curHealth);
+        }
+        else if (other.tag == "Bullet") {
+            Bullet bullet = other.GetComponent<Bullet>();
+            curHealth -= bullet.damage;
+            
+            // 현재위치 - 피격위치 = 반작용 구하기 
+            Vector3 reactVec = transform.position - other.transform.position;
+
+            // 적과 총알이 맞을 때 총알 오브젝트 파괴 
+            Destroy(other.gameObject);
+
+            // false 값을 주어 수류탄이 아니란것을 확인 
+            StartCoroutine(OnDamage(reactVec, false));
+
+            Debug.Log("Range : " + curHealth);
+        }
+    }
+
+
+    // 수류탄 피격 
+    public void HitByGrenade(Vector3 explosionPos)
+    {
+        // 수류탄 데미지 
+        curHealth -= 100;
+
+        // 반작용 
+        Vector3 reactVec = transform.position - explosionPos;
+
+        // true 값을 주어 수류탄인 것을 확인 
+        StartCoroutine(OnDamage(reactVec, true));
+    }
+
+    // Meterial 변경 
+    // 피격과 죽었을때 로직처리 
+    IEnumerator OnDamage(Vector3 reactVec, bool isGrenade)
+    {
+        // 피격이 있을 시 빨간색으로 변환 
+        foreach(MeshRenderer mesh in meshs)
+            mesh.material.color = Color.red;
+
+        // 피가 0보다 클때, 따라서 살아 있을 때 
+        if (curHealth > 0) {
+            // 원래 색으로 전환 
+            foreach (MeshRenderer mesh in meshs)
+                mesh.material.color = Color.white;
+
+            yield return new WaitForSeconds(0.1f);
+        }
+        // 죽었을 때 
+        else {
+            // 회색으로 변환 
+            foreach (MeshRenderer mesh in meshs)
+                mesh.material.color = Color.gray;
+
+            // Enemy Dead 가 14번 layer임 
+            // 죽었을 때 더이상 피격을 받지 않기 위해 충돌 레이어를 설정 하고 
+            // 죽었을 때 레이어 변경 
+            gameObject.layer = 14;
+
+
+            isDead = true;
+
+            // AI 기능 끄기 
+            isChase = false;
+            nav.enabled = false;
+
+            // 애니메이션 설정 
+            anim.SetTrigger("doDie");
+
+            // 점수 추가 
+            Player player = target.GetComponent<Player>();
+            player.score += score;
+
+            // 랜덤 코인 생성 
+            int ranCoin = Random.Range(0, 3);
+            Instantiate(coins[ranCoin], transform.position, Quaternion.identity);
+
+            // 적이 죽으면 count 1감소 
+            switch (enemyType) {
+                case Type.A:
+                    manager.enemyCntA--;
+                    break;
+                case Type.B:
+                    manager.enemyCntB--;
+                    break;
+                case Type.C:
+                    manager.enemyCntC--;
+                    break;
+                case Type.D:
+                    manager.enemyCntD--;
+                    break;
+            }
+            
+            // 적이 죽었을 시 뒤로 넉백 
+            // 수류탄에 맞을 때와 무기로 맞을 때로 나눠서 넉백 
+            if (isGrenade) {
+                reactVec = reactVec.normalized;
+                reactVec += Vector3.up * 3;
+
+                rigid.freezeRotation = false;
+                rigid.AddForce(reactVec * 5, ForceMode.Impulse);
+
+                // 회전 까지 추가 
+                rigid.AddTorque(reactVec * 15, ForceMode.Impulse);
+            }
+            else {
+                reactVec = reactVec.normalized;
+                reactVec += Vector3.up;
+                rigid.AddForce(reactVec * 5, ForceMode.Impulse);
+            }
+
+            // 적이 죽을 시 적 오브젝트 파괴 
+            Destroy(gameObject, 4);
+        }
+    }
+}
