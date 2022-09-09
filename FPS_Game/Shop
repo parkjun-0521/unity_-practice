@@ -1,0 +1,68 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class Shop : MonoBehaviour
+{
+    public RectTransform uiGroup;
+    public Animator anim;
+
+    // 아이템 구매 관련 변수 
+    public GameObject[] itemObj;    // 아이템 오브젝트 
+    public int[] itemPrice;         // 아이템 가격 
+    public Transform[] itemPos;     // 아이템 떨어지는 위치 
+    public Text talkText;           // 돈이 모자를 때 대사 변경 
+
+    // NPC 대사 변수 
+    public string[] talkData;
+
+    Player enterPlayer;
+
+    public void Enter(Player player)
+    {
+        enterPlayer = player;
+
+        //  UI를 화면 중앙에 오도록 설정 
+        uiGroup.anchoredPosition = Vector3.zero;
+    }
+   
+    public void Exit()
+    {
+        // 나갈 때 애니메이션 동작 
+        anim.SetTrigger("doHello");
+
+        // 상점에서 나갈때 UI를 -1000 아래 방향으로 내린다 
+        uiGroup.anchoredPosition = Vector3.down * -1000;
+    }
+
+    // 구매 로직 
+    public void Buy(int index)
+    {
+        int price = itemPrice[index];
+
+        // 돈이 모자를 때 
+        if(price > enterPlayer.coin) {
+            // 대사 변경 코루틴 
+            StopCoroutine(Talk());
+            StartCoroutine(Talk());
+            return;
+        }
+
+        
+        enterPlayer.coin -= price;
+
+        // 아이템이 나오는 위치에 약간의 랜덤 값을 추가 
+        Vector3 ranVec = Vector3.right * Random.Range(-3, 3) + Vector3.forward * Random.Range(-3, 3);
+
+        // 아이템 프리팹 가져오기 
+        Instantiate(itemObj[index], itemPos[index].position + ranVec, itemPos[index].rotation);
+    }
+
+    IEnumerator Talk()
+    {
+        talkText.text = talkData[1];
+        yield return new WaitForSeconds(2f);
+        talkText.text = talkData[0];
+    }
+}
