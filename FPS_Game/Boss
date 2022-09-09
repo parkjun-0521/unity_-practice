@@ -1,0 +1,146 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.AI;
+
+// Enemy 스크립트 상속 
+public class Boss : Enemy
+{
+    // 미사일 
+    public GameObject missile;
+
+    // 미사일이 나가는 위치 
+    public Transform missilPortA;
+    public Transform missilPortB;
+
+    // player 방향 예측 
+    Vector3 lookVec;
+    Vector3 tauntVec;
+    public bool isLook;
+
+    void Awake()
+    {
+        // 변수 초기화 
+        // 상속을 받아도 Awake에 있는 함수는 초기화가 되지 않기 때문에 자식 스크립트에서도 초기화를 해줘야 한다.
+        rigid = GetComponent<Rigidbody>();
+        boxCollider = GetComponent<BoxCollider>();
+        meshs = GetComponentsInChildren<MeshRenderer>();
+        nav = GetComponent<NavMeshAgent>();
+        anim = GetComponentInChildren<Animator>();
+
+        
+        nav.isStopped = true;
+        StartCoroutine(Think());
+    }
+
+ 
+    void Update()
+    { 
+        // 죽었을 때
+        // 모든 코루틴 정지 
+        if (isDead) {
+            StopAllCoroutines();
+            return;
+        }
+
+        // 바라보는 방향 로직 
+        if (isLook) {
+            float h = Input.GetAxisRaw("Horizontal");
+            float v = Input.GetAxisRaw("Vertical");
+            // 플레이어를 바라봄 ( 5만큼 앞쪽을 바라봄 )
+            lookVec = new Vector3(h, 0, v) * 5f;
+            transform.LookAt(target.position + lookVec);
+        }
+        else {
+            nav.SetDestination(tauntVec);
+        }
+    }
+
+    // 패턴 생각 
+    IEnumerator Think()
+    {
+        yield return new WaitForSeconds(0.1f);
+
+        // 랜덤으로 패턴 생각 
+        int ranAction = Random.Range(0, 5);
+        switch (ranAction) {
+            case 0:
+            case 1:
+                // 미사일 패턴 
+                StartCoroutine(Missile());
+                break;
+            case 2:
+            case 3:
+                // 돌 굴리기 패턴 
+                StartCoroutine(RockShot());
+                break;
+            case 4:
+                // 점프 공격 
+                StartCoroutine(Taunt());
+                break;
+        }
+    }
+
+    // 미사일 
+    IEnumerator Missile()
+    {
+        // 애니메이션 동작 
+        anim.SetTrigger("doShot");
+        yield return new WaitForSeconds(0.2f);
+
+        // 미사일 프리팹 생성 
+        GameObject instantMissileA = Instantiate(missile, missilPortA.position, missilPortA.rotation);
+        BossMissile bossMissileA = instantMissileA.GetComponent<BossMissile>();
+
+        // Player를 타겟으로 지정 
+        bossMissileA.target = target;
+
+        yield return new WaitForSeconds(0.3f);
+        GameObject instantMissileB = Instantiate(missile, missilPortB.position, missilPortB.rotation);
+        BossMissile bossMissileB = instantMissileB.GetComponent<BossMissile>();
+        bossMissileB.target = target;
+
+        yield return new WaitForSeconds(2f);
+
+        StartCoroutine(Think());
+    }
+
+    // 돌 
+    IEnumerator RockShot()
+    {
+        // 점프 뛰기 직전에는 Player를 지속적으로 바라보지 않도록 설정 
+        isLook = false;
+        anim.SetTrigger("doBigShot");
+
+        // Rock 프리팹 생성 
+        Instantiate(bullet, transform.position, transform.rotation);
+        yield return new WaitForSeconds(3f);
+
+        isLook = true;
+        StartCoroutine(Think());
+    }
+
+    // 점프 공격 
+    IEnumerator Taunt()
+    {
+        // 타겟의 위치 저장 
+        tauntVec = target.position + lookVec;
+
+        isLook = false;
+        nav.isStopped = false;
+        boxCollider.enabled = false;
+        anim.SetTrigger("doTaunt");
+        yield return new WaitForSeconds(1.5f);
+        meleeArea.enabled = true;
+
+        yield return new WaitForSeconds(0.5f);
+        meleeArea.enabled = false;
+
+        yield return new WaitForSeconds(1f);
+        isLook = true;
+        nav.isStopped = true;
+        boxCollider.enabled = true;
+
+        StartCoroutine(Think());
+    }
+}
