@@ -1,0 +1,44 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Grenade : MonoBehaviour
+{
+    public GameObject meshObj;
+    public GameObject effectObj;
+    public Rigidbody rigid;
+
+
+    void Start()
+    {
+        StartCoroutine(Explsion());
+    }
+    
+    // 수류탄 폭발 
+    IEnumerator Explsion()
+    {
+        yield return new WaitForSeconds(3f);
+
+        // 폭발시 이동과 회전 속도는 zero 
+        rigid.velocity = Vector3.zero;
+        rigid.angularVelocity = Vector3.zero;
+
+        // 메쉬는 끄고 이펙트는 켜기 
+        meshObj.SetActive(false);
+        effectObj.SetActive(true);
+
+        // 원형(구체) 모양의 Ray를 쏜다
+        // SphereCastAll ( 시작 위치 , 반지름, 쏘는 방향 , 쏘는 방향으로 부터의 거리, layerMask )
+        RaycastHit[] rayHits = Physics.SphereCastAll(transform.position, 15, Vector3.up, 0f, LayerMask.GetMask("Enemy"));
+
+        // Ray에 걸린 애들이 있다면 
+        // hitObj의 rayHits에 닿은 오브젝트를 다 불러옴 
+        foreach (RaycastHit hitObj in rayHits) {
+            // Enemy 스크립트에 HitByGrenade 함수 만들기 
+            hitObj.transform.GetComponent<Enemy>().HitByGrenade(transform.position);
+        }
+
+        // 터진 후 오브젝트 파괴 
+        Destroy(gameObject, 5);
+    }
+}
