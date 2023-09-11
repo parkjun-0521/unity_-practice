@@ -11,3 +11,28 @@
 플레이어 
 - Transform : 플레이어의 기본 속성 ( 위치, 회전, 크기 ) 속성을 관리하는 컴포넌트 
 - Sprite Renderer : 스프라이트를 그려주는 컴포넌트 ( 이게 없으면 스프라이트가 보이지 않는다 ) 
+
+- 변수명에 의미 부여하여 변수명 짓기
+- 기본적인 이동 값 지정 
+  - inputVec.x = Input.GetAxisRaw("Horizontal");        // 좌우 이동 
+  - inputVec.y = Input.GetAxisRaw("Vertical");          // 상하 이동 
+- 플레이어 이동 관련 3가지 방법 ( input 관련 이동 )
+  - // 1. 힘을 줘서 이동시키는 방법 
+    rigid.AddForce(inputVec);
+
+    // 2. 속도 제어 
+    rigid.velocity = inputVec;
+
+    // 3. 위치 이동
+    rigid.MovePosition(rigid.position + nextVec);
+
+- 새롭게 나온 이동 방법 
+  - Package Manager에서 Input System  Install 하기
+  - 이후 Component에서 Player Input 컴포넌트 가져오기 
+  - Create Action 으로 만들기 
+    - Move 안의 Interactions : 호출타이밍을 지정 
+    - Move 안의 Processors : 추가적인 후보키 선정 
+
+
+
+
