@@ -34,5 +34,36 @@
     - Move 안의 Processors : 추가적인 후보키 선정 
 
 
+2D 무한 맵처럼 보이도록 하기 
+
+Tilemap Collider 2D 타일맵에 콜라이더 추가 
+- 각 픽셀 마다 콜라이더가 생성됨 
+- Used By Composite : Composite를 사용하겠다. 
+- Composite를 사용하면 콜라이더가 합쳐진다. 
+
+Composite Collider 2D 
+- 콜라이더 합치기? 
+- Used By Composite를 활성화 하면 
+- 콜라이더의 제어권이 Composite Collider로 바뀐다. 
+- Is Trigger 체크는 반드시 ( Player와 맵의 충돌을 막아야 하기에 ) 
+
+Player에 자식 오브젝트로 빈 오브젝트 추가 
+- Collider를 컴포넌트를 사용하고 Size를 지정 
+- Is Trigger를 체크하여 타일맵과의 충돌을 막는다. 
+
+싱글톤 사용 
+- public static GameManager instance;
+- public Awake(){
+	instance = this;
+- }
+- 위처럼 작성시 다른 스크립트에서 GameManager.instance. 로 변수, 함수를 불러올 수 있다. 
+
+맵 이동 
+- 맵과 Player의 거리를 계산 ( X와 Y축의 거리 차이를 구한다. )
+- Player의 이동 방향을 계산 
+	- 3항 연산자로 오른쪽,위쪽 이동시 1 왼쪽,아래쪽 이동시 -1 
+- X의 이동이 Y의 이동 보다 크면 맵 전체를 X축 방향으로 이동 ( Vector3.right * 이동방향 * 크기 )
+- Y의 이동이 X의 이동 보다 크면 맵 전체를 Y축 방향으로 이동 ( Vector3.up * 이동방향 * 크기 ) 
+
 
 
