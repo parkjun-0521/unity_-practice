@@ -1,0 +1,54 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+/* 
+
+    ScriptableObject 만드는 로직
+    아이템을 좀 더 체계적으로 관리하기 위한 법 
+
+    ScriptableObject 사용법 
+    - 마우스 우클릭으로 Create를 하게 되면 메뉴 상단에 내가 지정한 menuName이 등장하게 된다. 
+    - 아래 같은 경우는 Scriptble Object 라는 옵션이 생기고 옆에 작은 메뉴로 ItemData 라는 것이 생기게 된다. 
+    - ItemData 를 클릭하여 생성하면 스크립트블 오브젝트가 생성이 되는데 기본 이름이 Item 이다. 
+    - 스크립트블 오브젝트라는 것이 궁금하면 Data에 있는 파일들을 한번씩 확인해보자 
+
+    [CreateAssetMenu(fileName = "Item", menuName = "Scriptble Object/ItemData")]
+
+    ItemData 클래스에 작성한 속성들이 들어가 있는 스크립트블 오브젝트가 만들어진다. 
+
+*/
+
+// CreateAssetMenu : 커스텀 메뉴를 생성하는 속성 
+// fileName : 생성되는 파일의 이름, menuName : 메뉴의 경로는 어디고, 이름은 무엇인가
+[CreateAssetMenu(fileName = "Item", menuName = "Scriptble Object/ItemData")]
+
+// ScriptableObject 를 상속 받아서 만든다. 
+// 아래의 로직은 단지 ScriptableObject 의 기반이 되는 생성 로직을 만든 것이다.  
+public class ItemData : ScriptableObject
+{
+    public enum ItemType { Melee, Range, Glove, Shoe, Heal }    // 아이템 구별 타입 변수 
+
+    // 아이템 이름, 타입  
+    [Header("# Main Info")]
+    public ItemType itemType;   // 아이템 구별 타입 ( enum을 사용하기 위해 변수 선언 )
+
+    public int itemId;          // 아이템의 ID
+    public string itemName;     // 아이템의 이름 
+    [TextArea]                  // 아래 속성을 여러줄을 작성할 수 있는 TextBox로 만들어준다.
+    public string itemDesc;     // 아이템의 설명 
+    public Sprite itemIcon;     // 아이템의 아이콘 ( 이미지 )
+
+    // 레벨업 시 증가해야하는 속성 
+    [Header("# Level Data")]
+    public float baseDamage;    // 아이템의 0레벨 데미지 
+    public int baseCount;       // 아이템의 기본 관통 횟수 
+    public float[] damages;     // 아이템의 데미지 증가량 
+    public int[] counts;        // 아이템의 관통력 증가량 
+
+    // 무기를 장착했을 때 모션 
+    [Header("# Weapon")]
+    public GameObject projectile;   // 투사체 무기 프리펩 ( 근접무기, 원거리 무기 )  
+    public Sprite hand;             // 아이템을 얻었을 때 오른팔과 왼팔에 무기 이미지를 적용 시켜줄 Sprite 변수 
+
+}
