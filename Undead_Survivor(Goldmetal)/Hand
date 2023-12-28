@@ -1,0 +1,58 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+/* 
+
+    아이템을 얻었을 때 오른손, 왼손에 각각 이미지 스프라이트 적용 시키는 로직 구현  
+
+ */
+
+public class Hand : MonoBehaviour
+{
+    public bool isLeft;                 // 오른손, 왼손인지 구분을 위한 bool 변수 선언 
+    public SpriteRenderer spriter;      // 스프라이트 변수 선언 
+
+    SpriteRenderer player;              // 플레이어가 반전 되었는지 확인하기 위해 변수 선언 
+
+    // 캐릭터가 초기에 오른쪽을 보고 있다 기준
+    // 오른손은 그냥 위치하면됨 ( 회전값이 따로 없다 ) 
+    Vector3 rightPos = new Vector3(0.35f, -0.15f, 0);               // 오른손 위치 
+    Vector3 rightPosReverse = new Vector3(-0.15f, -0.15f, 0);       // 반전 되었을 때 오른손 위치 ( 왼쪽을 봤을 때 ) 
+
+    // 왼손은 회전 값이 따로 존재 
+    // Quaternion : 회전값 
+    Quaternion leftRot = Quaternion.Euler(0,0,-35);                 // 왼손 위치 
+    Quaternion leftRotReverse = Quaternion.Euler(0,0,-135);         // 반전 되었을 때 왼손 위치 ( 왼쪽을 봤을 때 ) 
+
+
+    void Awake()
+    {
+        // 자식에서 부모가 가지고 있는 컴포넌트로 초기화를 해야하므로 
+        // GetComponentsInParent 로 부모에 접근을 하고 거기에서 SpriteRenderer 를 가져와 초기화 
+        // [0] : 은 자기 자신의 컴포넌트를 말한다. 
+        // [1] : 자기자신의 다음 위치 즉, 부모의 위치를 말한다. 부모의 컴포넌트를 가져와 초기화 하기 때문에 [1]로 가져온다. 
+        player = GetComponentsInParent<SpriteRenderer>()[1];    
+    }
+
+    void LateUpdate()
+    {
+        // 초기 플레이어의 회전 변수 
+        // 현재 플레이어의 filpX의 값을 가져온다. 
+        // 플레이어가 왼쪽을 보면 true, 오른쪽을 보면 false 
+        bool isReverse = player.flipX;
+
+        // 왼손
+        if (isLeft) {   // 근접 무기 
+            transform.localRotation = isReverse ? leftRotReverse : leftRot; // isReverse가 false 이면 오른쪽을 보고 있는 것이므로 leftRot, true 이면 왼쪽을 보는 것이므로 leftRotReverse
+            spriter.flipY = isReverse;                                      // 회전을 하였기 때문에 Y축으로 반전을 시킨다.
+            spriter.sortingOrder = isReverse ? 4 : 6;                       // 오른쪽을 보면 캐릭터 보다 위쪽에 보여야 하고, 왼쪽을 보면 캐릭터 보다 아래쪽에 보여야하기 때문에 
+        }
+        // 오른손 
+        else {  // 원거리 무기
+            transform.localPosition = isReverse ? rightPosReverse : rightPos;   // isReverse가 false 이면 오른쪽을 보고 있는 것이므로 rightPos, true 이면 왼쪽을 보는 것이므로 rightPosReverse
+            spriter.flipX = isReverse;                                          // 그냥 반전이므로 X축으로 반전 
+            spriter.sortingOrder = isReverse ? 6 : 4;                           // 오른쪽을 보면 캐릭터 보다 아래쪽에 보여야 하고, 왼쪽을 보면 캐릭터 보다 위쪽에 보여야하기 때문에
+        }
+    }
+}
