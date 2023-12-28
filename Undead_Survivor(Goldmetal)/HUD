@@ -1,0 +1,75 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;               // UI를 사용할 때는 UnityEngine.UI 네임스페이스를 사용한다. 
+
+// HUD : Heads-Up Display
+public class HUD : MonoBehaviour
+{
+    // 열거형 데이터 
+    // 경험치, 레벨, 킬, 시간, 체력
+    public enum InfoType {  Exp, Level, Kill, Time, Health }         
+    public InfoType type;           // 열거형 데이터를 사용하기 위해 선언한 변수 
+
+    Text myText;                    // Text UI 변수 
+    Slider mySilder;                // Silder UI 변수 ( 레벨업 경험치 바 ) 
+
+    void Awake()
+    {
+        // 각 UI변수를초기화 
+        myText = GetComponent<Text>();
+        mySilder = GetComponent<Slider>();
+    }
+
+    // Update() 가 끝난 후 동작하는 LateUpdate()
+    void LateUpdate()
+    {
+        // 각 열거형 데이터에 따라 처리로직 구현 ( 명령 디자인 패턴 사용 ) 
+        switch (type) {
+            case InfoType.Exp:      // 경험치 UI 
+                // 현재 경험치 / Max 경험치 = 경험치의 비율이 나온다. 
+                // 그 비율을 Silder UI의 Value 값에 대입 
+                float curExp = GameManager.instance.exp;
+                // 레벨이 최대값인 10을 넘어갈 시 GameManager.instance.nextExp.Length - 1 = 9로 최소값을 지정하여 
+                // 넘어가도 레벨이 9가 되도록 한다. 
+                float maxExp = GameManager.instance.nextExp[Mathf.Min(GameManager.instance.level, GameManager.instance.nextExp.Length - 1)];
+                mySilder.value = curExp / maxExp;
+                break;
+            case InfoType.Level:    // 레벨 Text UI 
+                // 정수형을 Text로 변경하여 값 넣기 
+                // string.Format(" { 인덱스 순서 : 숫자에 대한 형태} ", 인덱스에 넣을 값 );    // 정수 값을 문열 값으로 변경하는 함수 
+                // ("Lv.{0:F0}", GameManager.instance.level) 을 해석하면 
+                // 0번째 인자의 값 즉, GameManager.instance.level 이것을 말한다. 뒤에 , 찍고 인자값을 추가하고 출력하고 싶으면 0대신 1,2..를 적어주면 된다. 
+                // 0번째 인자값을  F0 ( 소수점 버림 ) 형식으로 출력을 해라 
+                // F0 : 소수점 버림 
+                myText.text = string.Format("Lv.{0:F0}", GameManager.instance.level);
+                break;
+            case InfoType.Kill:     // 킬 Text UI
+                // 위 Level과 동일한 문장이다. 
+                myText.text = string.Format("{0:F0}", GameManager.instance.kill);
+                break;
+            case InfoType.Time:     // 타이머 Text UI ( 게임 시간 ) 
+                // 전체 게임 시간 - 현재 게임 시간 을 하여 남은 시간을 계산한다. ( 초로 계산을 한다. )
+                float remainTime = GameManager.instance.maxGameTime - GameManager.instance.gameTime;
+
+                // FloorToInt : 소수점 버림 
+                // 초단위 임으로 / 60을 하면 분이 구해진다. 
+                // 초단위 임으로 % 60으로 나머디를 구하면 초가 구해진다.
+                int min = Mathf.FloorToInt(remainTime / 60);        // 소수점 버림 ( 분 구하기 )
+                int sec = Mathf.FloorToInt(remainTime % 60);        // 소수점 버림 ( 초 구하기 )
+
+                // D2 : 자리수 2개 고정 
+                // 분:초를 두자리 수로 고정을 하여 text를 만들고 
+                // Text 값을 변경해준다. 
+                myText.text = string.Format("{0:D2}:{1:D2}", min, sec);
+                break;
+            case InfoType.Health:
+                // 현재 체력과 최대 체력을 구하여 / 연산을 통해 현재 체력의 퍼센트를 구한다. 
+                float curhealth = GameManager.instance.health;
+                float maxHealth = GameManager.instance.maxHealth;
+                mySilder.value = curhealth / maxHealth;
+                break;
+        }
+    }
+
+}
