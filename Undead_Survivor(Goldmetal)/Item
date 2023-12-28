@@ -1,0 +1,122 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+// Item UI에 관련된 스크립트 
+public class Item : MonoBehaviour
+{
+    public ItemData data;       // 스크립트블 오브젝트 변수 
+    public int level;           // 레벨 변수 
+    public Weapon weapon;       // 무기 변수 
+    public Gear gear;           // 장갑, 신발 아이템 능력 증가 관련 변수 
+
+    Image icon;                 // UI 이미지 변수 
+    Text textLevel;             // UI 레벨 Text 변수 
+    Text textName;              // UI 아이템 이름 Text 변수 
+    Text textDesc;              // UI 아이템 설명 Text 변수 
+
+    void Awake()
+    {
+        // 이미지 초기화
+        // 자식 오브젝트의 첫번째 이미지로 초기화 해야되기 때문에 GetComponentsInChildren로 자식 오브젝트를 다 가져오고 ( 자기도 포함 )
+        // GetComponentsInChildren<Image>()[0] 은 자기 자신이기 때문에 GetComponentsInChildren<Image>()[1] 로 첫번째 자식의 이미지를 가져온다.
+        icon = GetComponentsInChildren<Image>()[1];
+        // sprite를 ItemData 에 있는 itemIcon 으로 변경 
+        icon.sprite = data.itemIcon;
+
+        // Text 초기화 
+        Text[] texts = GetComponentsInChildren<Text>();
+        textLevel = texts[0];       // 레벨 
+        textName = texts[1];        // 아이템 이름 
+        textDesc = texts[2];        // 아이템 설명 
+
+        // 아이템 이름은 처음 지정하고 변하지 않으므로 초기화 할때 지정해 준다. 
+        textName.text = data.itemName;
+    }
+
+    // 생성이 되었을 때 실행되는 로직 
+    void OnEnable()
+    {
+        // 레벨 Text 변경 
+        textLevel.text = "Lv." + (level + 1);
+
+        // 아이템 타입에 따라 레벨업 UI Text의 내용 변경 
+        switch (data.itemType) {
+            case ItemData.ItemType.Melee:
+            case ItemData.ItemType.Range:
+                // data.itemDesc 에 즉, 아이템 설명에 {0}, {1} 이라고 적었던 부분이 있다. 뒤에있는 2개의 매개변수는 이 위치의 매개변수의 순서를 의미 
+                // data.itemDesc에 값을 넣고 문자열로 변경하기 위해 string.Format 을 사용 
+                // 근접무기와 원거리무기의 데미지와 관통력 
+                textDesc.text = string.Format(data.itemDesc, data.damages[level] * 100, data.counts[level]);    
+                break;
+            case ItemData.ItemType.Glove:
+            case ItemData.ItemType.Shoe:
+                // 이동속도, 공격속도의 크기를 가져온다. 
+                textDesc.text = string.Format(data.itemDesc, data.damages[level]  * 100);                       
+                break;
+            default:
+                // 힐팩의 아이템 설명 정보를 가져온다. 
+                textDesc.text = string.Format(data.itemDesc);
+                break;
+        }
+        
+    }
+
+    // 레벨업 버튼을 눌렀을 때 동작하는 함수 
+    // 처음에는 오브젝트들이 없지만 클릭을 하면 새롭게 오브젝트를 만들고 스크립트를 불러와서 동작을 한다. 
+    public void OnClick()
+    {
+        // 아이템 타입을 눌렀을 때 각 분기에 맞게 로직이 동작 
+        switch (data.itemType) {
+            // 근접 무기와 원거리 무기를 눌렀을 때 
+            case ItemData.ItemType.Melee:
+            case ItemData.ItemType.Range:
+                if(level == 0) {                                    // 레벨이 0일 때 무기 오브젝트를 생성한다. 
+                    GameObject newWeapon = new GameObject();        // 새로운 오브젝트를 생성한다. 
+                    weapon = newWeapon.AddComponent<Weapon>();      // 그 오브젝트에 Weapon 스크립트를 추가 ( AddComponent 는 값을 반환해 주기도 한다 ) 
+                    weapon.Init(data);                              // Weapon 스크립트의 Init() 함수 호출
+                }
+                else {                                              // 레벨이 0보다 높을 때
+                                                                    // 초기값을 가져온다.
+                    float nextDamage = data.baseDamage;
+                    int nextCount = 0;
+
+                    nextDamage += data.baseDamage * data.damages[level];    // 다음 값은 현재 데미지 * 스크립트블 오브젝트의 데미지의 level에 따른 데미지 값 을 가져와 기존 값에 더해준다.
+                    nextCount += data.counts[level];                // 스크립트블 오브젝트의 level에 따른 관통력을 가져와 더해준다.
+
+                    weapon.LevelUp(nextDamage, nextCount);          // Weapon 스크립트의 LevelUp() 함수에 값 리턴 
+                }
+                level++;                                            // 버튼을 누르고 아이템의 레벨을 올린다. 
+                break;
+            // 장갑과 신발 아이템을 눌렀을 때 
+            case ItemData.ItemType.Glove:
+            case ItemData.ItemType.Shoe:
+                if(level == 0) {                                    // 레벨이 0일 때 
+                    GameObject newGear = new GameObject();          // 새로운 오브젝트 생성 
+                    gear = newGear.AddComponent<Gear>();            // 새로운 오브젝트에 Gear 스크립트 추가 
+                    gear.Init(data);                                // 초기 함수 실행 
+                }
+                else {                                              // 레벨이 0보다 높을 때
+                    float nextRate = data.damages[level];           // 다음 레벨에 증가한 Gear 값 
+                    gear.LevelUp(nextRate);                         // 증가된 Gear 값을 넘겨준다.
+                }
+                level++;                                            // 버튼을 누르고 아이템의 레벨을 올린다. 
+                break;
+            // 체력 아이템을 눌렀을 때
+            case ItemData.ItemType.Heal:
+                // 레벨에 상관없이 계속할 수 있다. 
+                GameManager.instance.health = GameManager.instance.maxHealth;       // 체력 아이텝믕 눌렀을 때 Player에 접근해서 Health를 MaxHealth로 변경 
+                break;
+        }
+
+        // 최대 레벨이 되었을 때 더이상 레벨업 버튼을 누를 수 없도록 지정 
+        // 아이템의 레벨이 스크립트블 오브젝트의 크기 즉, 5와 같아졌을 때 
+        // 버튼의 속성인 interactable 를 false로 변경한다. ( interactable 클릭 이벤트를 동작시키는 속성 ) 
+        if (level == data.damages.Length) {
+            GetComponent<Button>().interactable = false;
+        }
+
+    }
+
+}
