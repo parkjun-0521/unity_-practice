@@ -1,0 +1,232 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+// PoolManager에서 받아온 데이터를 가공하는 부분 //
+public class Weapon : MonoBehaviour
+{
+    public int id;          // 무기의 ID 변수 
+    public int prefabId;    // 무기의 프리펩ID 변수 
+    public float damage;    // 무기 데미지지
+    public int count;       // 주변에 무기 개수
+    public float speed;     // 무기 회전 속도, 원거리 무기 발사 딜레이 속도 
+
+    float timer;            // 원거리 무기 발사 시간
+
+    Player player;          // Player 가져오기 위한 변수 선언 
+
+    void Awake()
+    {
+        // 부모의 스크립트를 가져오는 방법
+        // player = GetComponentInParent<Player>();     // 함수로 부모의 컴포넌트를 가져오는 방법 
+
+        // GameManager에 있는 Player 변수를 활용한다.
+        player = GameManager.instance.player;
+    }
+
+    void Update()
+    {
+        // 캐릭터가 죽거나, 게임 시간이 정지하였을 때 캐릭터의 무기 공격을 제한하기 위해  
+        // 캐릭터의 isLive가 false이면 return
+        if (!GameManager.instance.isLive)
+            return;
+
+        switch (id) {
+            case 0:
+                // 무기의 ID가 0일때 즉, 근접무기일 때 
+                // 회전을 하도록 한다. Init()에서 case 0: 의 속도가 양수이기 때문에 Vector3.back으로 해줘야 시계 방향으로 돈다. 
+                // 음수라면 foeward로 해주면 된다. 
+                transform.Rotate(Vector3.back * speed * Time.deltaTime);
+                break;      
+            default:
+                // 현재 시간을 계속 더하기 
+                timer += Time.deltaTime;
+
+                // 현재 시간이 발사 딜레이시간보다 길면 총알을 발사해라 
+                if (timer > speed) {
+                    // 발사했을 때 현재 시간 초기화 
+                    timer = 0f;
+                    // 실제 발사하는 로직 
+                    Fire();
+                }
+                break;
+        }
+
+
+        // text
+        if (Input.GetButtonDown("Jump")) {
+            //LevelUp(10,1);
+        }
+    }
+
+    // 레벨업을 했을 때 무기를 더 쌔게 만들기 위한 함수 
+    public void LevelUp(float damage, int count)
+    {
+        // 각 변수를 받아온 값으로 초기화 
+        this.damage = damage * Character.Damage;
+        this.count += count;
+
+        // 근접 무기일 경우 배치가 필요하기 때문에 한번 불러온다.
+        if(id == 0) {
+            Batch();
+        }
+
+        // 레벨업을 했을 때 Gear의 레벨에 맞는 Gear 값으로 맞춰줘야 하기 때문에 한번 실행해 주도록 한다.
+        // BroadcastMessage : 특정 함수 호출을 모든 자식에게 방송하는 함수 
+        // SendMessageOptions.DontRequireReceiver : 꼭 메시지를 보내줄 필요는 없다. 라는 의미 
+        // Player가 ApplyGear 함수를 가지고 있는 모든 자식 오브젝트한테 이것을 실행 해라 라고 지시하는 것 
+        player.BroadcastMessage("ApplyGear", SendMessageOptions.DontRequireReceiver);
+    }
+
+    // 초기의 아이템을 얻었을 때 초기화 하는 함수 
+    public void Init(ItemData data)     // 매개변수로 스크립트블 오브젝트를 받아서 각 능력을 초기화 
+    {
+        // 기본 셋팅
+        name = "Weapon" + data.itemId;              // 무기의 이름을 설정 
+        transform.parent = player.transform;        // 부모의 위치를 Player로 지정 
+        transform.localPosition = Vector3.zero;     // localposition을 ( 0,0,0 ) 으로 초기화 ( Player 안에서 위치를 맞추기 때문에 world 좌표로 (0,0,0) 이 아니다 ) 
+
+        // 프로퍼티 셋팅
+        // 스크립트블 오브젝트 데이터로 초기화 
+        id = data.itemId;                           // 아이템 ID 초기화 
+        damage = data.baseDamage * Character.Damage;// 기본 데미지 * 서로다른 플레이어의 데미지 증가량으로 초기화 
+        count = data.baseCount + Character.Count;   // 기본 관통력 + 서로다른 플레이어의 관통력 증가량으로 초기화 
+
+        // 프리펩의 ID 맞춰주기 
+        // 프리펩 전체 순회 
+        for (int index = 0; index < GameManager.instance.pool.prefabs.Length; index++) {
+            // 스크립트블 오브젝트의 투사체 프리팹과 현재 풀링의 프리팹이 같을 때 
+            if(data.projectile == GameManager.instance.pool.prefabs[index]) {
+                // 현재의 index로 프리팹 id 초기화 
+                prefabId = index;
+                break;
+            }
+        }
+
+        // 아이템의 ID를 가져와서 각각 동작을 구현 
+        switch (id) {
+            case 0:     // 근접무기 
+                // 기본 속도에 각 캐릭터의 속성에 맞는 값을 곱해준다. 
+                speed = 150f * Character.WeaponSpeed;
+                Batch();
+                break;
+            default:    // 원거리 무기 
+                // 총알 오브젝트의 연사속도 
+                // 위에 Update() 로직에서 timer 변수가 speed 변수보다 클때로 지정하였기 때문에 
+                // speed는 원거리 무기에서 연사 딜레이 즉, 발사가 되는 속도를 말한다. 
+                // 기본 연사 속도에 각 캐릭터의 속성에 맞는 연사 딜레이 속도를 곱해준다.
+                speed = 0.5f * Character.WeaponRate;
+                break;
+        }
+
+        // 팔 적용
+        // 스크립트블 오브젝트에 스프라이트를 저장하고 알맞은 무기를 들었을 때 스프라이트를 적용시키는 로직
+        // enum 타입의 데이터를 잘 보면 { 0,1,2,3... } 식으로 되어 있다. 이것을 활용 
+        Hand hand = player.hands[(int)data.itemType];   // 플레이어에 접근해서 hand 오브젝트를 가져온다. 근접 : 0, 원거리 : 1
+        hand.spriter.sprite = data.hand;                // 무기를 들었을때 InputData에 hand의 스프라이트를 가져와 변경한다. 
+        hand.gameObject.SetActive(true);                // 이후 hand 오브젝트를 활성화 해주면 된다.
+
+        // 이미 전에 Gear로 아이템의 속도가 업데이트가 되었을 때 
+        // 이후에 얻은 아이템도 그 속도가 적용되어야 하기 때문에 
+        // 그것을 하기 위해 아이템이 처음 생성되었을 때 
+        // BroadcastMessage : 특정 함수 호출을 모든 자식에게 방송하는 함수 
+        // SendMessageOptions.DontRequireReceiver : 꼭 메시지를 보내줄 필요는 없다. 라는 의미 
+        // Player가 ApplyGear 함수를 가지고 있는 모든 자식 오브젝트한테 이것을 실행 해라 라고 지시하는 것 
+        player.BroadcastMessage("ApplyGear", SendMessageOptions.DontRequireReceiver);
+    }
+
+    // 생성된 무기를 배치하는 함수
+    void Batch()
+    {
+        // LevelUp을 할 때 마다 Batch 함수를 불러온다. 그 때 마다 프리펩에서 불러오니깐 기존에 있던 무기에 새로운 프리펩이 덮어씌워져 
+        // 무기의 배치가 이상하게 나온다. 
+        // 이것을 해결하기 위해 LevelUp을 하였을 때 Batch 함수를 실행하면 일단 기존에 가지고 있던 무기 프리펩을 재사용 하고 
+        // 레벨업을 하여 증가한 무기의 개수는 풀링으로 가져온다.
+        // 이후에 개수에 맞게 위치와 각도를 초기화 한다.
+
+        // conunt 마다 PoolManager에 있는 무기 프리펩을 가져올 것이다. 
+        for (int index = 0; index < count; index++) {
+            
+            // bullet의 위치를 가져오기 위한 변수 선언 
+            Transform bullet;
+
+            // .childCount : 자신의 자식 오브젝트의 개수를 반환해주는 속성 
+            // index가 내가 가지고 있는 자식 오브젝트의 개수를 넘지 않을 때 
+            // 기존의 오브젝트를 먼저 사용하고 모자란 것을 풀링에서 가져오겠다. 
+            if (index < transform.childCount) {
+                // index가 아직 childCount 보다 작다면 GetChild로 가져오기 
+                // 기존에 있던 프리펩 재사용 
+                bullet = transform.GetChild(index);
+            }
+            else {
+                // GameManager의 PoolManager에서 프리펩을 가져와 위치를 지정 
+                // 새로운 프리펩을 풀링에서 가져온다.
+                bullet = GameManager.instance.pool.Get(prefabId).transform;
+                // 부모 오브젝트가 PoolManager이다. 부모 변경 
+                // bullet의 위치를 Weapon의 자식으로 생성되도록 한다. 
+                bullet.parent = transform;
+            }
+            
+            // local위치로 초기화 
+            // bullet의 위치를 생성될 때 Vector.zero로 하여 Player의 위치에서 생성되도록 한다.
+            bullet.localPosition = Vector3.zero;
+
+            // 회전의 초기값도 0으로 초기화를 하려면 Quaternion.identity를 사용해야 한다. 
+            bullet.localRotation = Quaternion.identity;
+
+            // 회전벡터 구현 ( 360도를 count로 나누어 회전 근접 무기 하나의 각도를 구하고 그 각도 위치에 index를 배치한다. )
+            // ex) count가 3이면 rotVec은 index=1에 120도, index=2에 240도, index=3에 360도가 된다. 
+            Vector3 rotVec = Vector3.forward * 360 / count * index;
+
+            // 위에서 구한 각도를 회전에 바로 대입 ( 함수로 계산된 각도 )
+            bullet.Rotate(rotVec);
+
+            // bullet의 위치 Translate함수로 지정 ( bullet.up => 내 자신의 위방향을 말한다. )
+            // 이동 방향을 Space.World로 지정 
+            bullet.Translate(bullet.up * 1.5f, Space.World);
+
+            // 무기 초기값 지정 ( 근접 무기는 무조건 관통하기 때문에 -100 으로 지정 )
+            // Bullet의 Init 함수의 인자값 ( 데미지, 관통력, 방향 ) 
+            // 근접 무기 방향은 없으므로 zero
+            bullet.GetComponent<Bullet>().Init(damage, -100, Vector3.zero);     // -100 은 무한으로 관통 
+
+        }
+    }
+
+    // 총알 발사 
+    void Fire()
+    {
+        // Player 스크립트에서 Scanner 스크립트를 추가한다. 
+        // 이후에 아래 if 문 조건 처럼 불러온다.
+        // player 주변에 적이 없다면 return
+        if (!player.scanner.nearestTarget) {
+            return;
+        }
+
+        // 타겟의 위치를 반환 ( scanner의 nearestTarget 위치를 가져온다 )
+        Vector3 targetPos = player.scanner.nearestTarget.position;
+
+        // 가까운 타겟의 위치에서 나의 위치를 빼서 총알이 나갈 방향을 구한다. ( 크기 까지 같이 구해진다. )
+        Vector3 dir = targetPos - transform.position;
+
+        // 크기는 항상 동일해야 하기 때문에 Normalized로 단위벡터로 만든다. ( 크기를 1로 고정 )
+        // 크기가 항상 1인 방향이 구해진다.
+        dir = dir.normalized;
+
+        // 총알 프리팹을 생성한다. ( 풀링으로 가져온다. ) 
+        Transform bullet = GameManager.instance.pool.Get(prefabId).transform;
+        // 프리팹을 생성한 후 위치를 플레이어 위치로 초기화 
+        bullet.position = transform.position;
+
+        // Quaternion : 벡터의 회전 값을 가져오는 것 
+        // FromToRotation : 지정된 축을 중심으로 목표를 향해 회전하는 함수 ( 인자값 ( 회전시킬 방향(지정된 축), 나아가는 방향 ) ) 
+        // Vector3.up : z축으로 회전한다. 
+        bullet.rotation = Quaternion.FromToRotation(Vector3.up, dir);
+
+        // 원거리 무기 초기화 ( 데미지, 관통력, 나아갈 방향 )
+        bullet.GetComponent<Bullet>().Init(damage, count, dir);     // -1 은 무한으로 관통 
+
+        // 오디오 
+        AudioManager.instance.PlaySfx(AudioManager.Sfx.Range);      // 효과음 실행 ( enum에서 값을 가져와 매개변수로 전달 )  
+    }
+}
