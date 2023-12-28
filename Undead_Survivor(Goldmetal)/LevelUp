@@ -1,0 +1,100 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+
+/*
+ *  레벨업 이후 아이템 선택 UI가 등장하도록 로직 구현 
+ *  크기를 0으로 줄였다가 1로 만드는 방식으로 구현 
+ */
+
+
+public class LevelUp : MonoBehaviour
+{
+    RectTransform rect;     // UI Transform 변수 선언 
+    Item[] items;
+
+    void Awake()
+    {
+        // 변수 초기화 
+        rect = GetComponent<RectTransform>();       
+        // 자식에게 있는 Item Component로 초기화 ( 자식중에 비활성화 된 오브젝트도 있기 때문에 true 로 가져온다 )
+        items = GetComponentsInChildren<Item>(true);
+    }
+
+    // 아이템 UI를 보여지도록 함 
+    public void Show()
+    {
+        // 아이템을 5가지 중에 랜덤으로 3개를 선택하고 
+        // 선택한 것을 활성화 한다.                           --> Next() 
+        // 이후 레벨업 UI의 scale을 1,1,1 로 활성화하여 보여준다.  
+
+        Next();                             // 아이템 랜덤 3개 선택 
+        rect.localScale = Vector3.one;      // UI의 크기를 1,1,1 로 지정 
+        GameManager.instance.Stop();        // 레벨업 창이 나오면 게임 정지 
+
+        // 오디오 
+        AudioManager.instance.PlaySfx(AudioManager.Sfx.LevelUp);    // 효과음 실행 ( enum에서 값을 가져와 매개변수로 전달 )  
+        AudioManager.instance.EffectBgm(true);                      // 지정한 대역폭의 음이 실행되도록 오디오필터 활성화  
+    }
+
+    // 레벨업 후 아이템을 선택하면 UI가 사라지도록 함 
+    // Item의 OnClick() 이벤트에 등록시켜서 동작시킴 
+    public void Hide()
+    {
+        rect.localScale = Vector3.zero;     // UI의 크기를 0,0,0 으로 지정 
+        GameManager.instance.Resume();      // 레벨업이 끝나면 게임 재개 
+
+        // 오디오 
+        AudioManager.instance.PlaySfx(AudioManager.Sfx.Select);     // 효과음 실행 ( enum에서 값을 가져와 매개변수로 전달 )  
+        AudioManager.instance.EffectBgm(false);                     // 배경음이 실행되도록 오디오필터 비활성화  
+    }
+
+    // 가장 처음 생성되었을 때 기본무기 장착 
+    public void Select(int index)
+    {
+        // Item의 OnClick() 메소드를 호출한다. 
+        // OnClick()는 아이템을 눌렀을 때 동작하는 로직으로 기본 무기를 장착했을 때도 동일하기 때문에 가장 처음 한번 호출을 한다. 
+        items[index].OnClick();
+    }
+
+    // 5개의 아이템중 랜덤선택 하는 함수 
+    void Next()
+    {
+        // 1. 모든 아이템 비활성화 
+        // item을 전부 순회하면서 비활성화 
+        foreach (Item item in items) {
+            item.gameObject.SetActive(false);
+        }
+
+        // 2. 그 중에서 랜덤 3개 아이템 활성화 
+        int[] ran = new int[3];         // ran이라는 정수형 배열 선언     
+        // 무한 루프 
+        while (true) {
+            // 0부터 아이템의 길이만큼 랜덤한 값을 뽑는다. 
+            ran[0] = Random.Range(0, items.Length);
+            ran[1] = Random.Range(0, items.Length);
+            ran[2] = Random.Range(0, items.Length);
+
+            // ran 0~2 까지 모두 다를 때 while문을 나간다. 
+            if (ran[0] != ran[1] && ran[1] != ran[2] && ran[2] != ran[0])
+                break;
+        }
+
+        // ran의 크기만큼 for문을 동작 
+        for (int index = 0; index < ran.Length; index++) {
+            // 랜덤한 아이템 하나씩 가져온다. 
+            Item ranItem = items[ran[index]];
+            // 3. Max 레벨 아이템의 경우는 소비아이템으로 대체 
+            if (ranItem.level == ranItem.data.damages.Length) {
+                // 랜덤 아이템의 레벨이 자기 자신의 damages의 크기와 같을 때 
+                // 5번째 아이템이 고정으로 활성화 되도록 한다.
+                items[4].gameObject.SetActive(true);
+            }
+            else {
+                // 랜덤 아이템을 활성화 
+                ranItem.gameObject.SetActive(true);
+            }
+        } 
+    }
+}
