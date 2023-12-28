@@ -1,0 +1,39 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+/*
+    서로 다른 캐릭터의 능력을 체계적으로 적용시키기 위해 
+    각 캐릭터의 ID값을 활용하여 공격력, 이동속도, 공격속도 등을 바꾼다. 
+    float 값으로 반환하여 추후 캐릭터 생성 시 생성되었을 때 기본값에 곱해준다. 
+ */
+
+public class Character : MonoBehaviour
+{
+    public static float Speed {
+        // ID가 0인 캐릭터이면 이동속도를 1.1, 0이 아니면 1 을 반환 
+        get { return GameManager.instance.playerId == 0 ? 1.1f : 1f; }
+    }
+
+    public static float WeaponSpeed {
+        // ID가 1인 캐릭터이면 회전속도가 1.1, 1이 아니면 1을 반환 
+        get { return GameManager.instance.playerId == 1 ? 1.1f : 1f; }
+    }
+
+    public static float WeaponRate {
+        // ID가 1인 캐릭터이면 연사속도가 0.9, 1이 아니면 1을 반환 
+        // 연사 속도는 딜레이를 말한다. 딜레이가 작을 수록 빠르게 발사한다. 
+        get { return GameManager.instance.playerId == 1 ? 0.9f : 1f; }
+    }
+
+    public static float Damage {
+        // ID가 2인 캐릭터이면 데미지가 1.2, 2가 아니면 1을 반환 
+        get { return GameManager.instance.playerId == 2 ? 1.2f : 1f; }
+    }
+
+    public static int Count {
+        // ID가 3인 캐릭터이면 관통력이 1, 1이 아니면 0을 반환 
+        get { return GameManager.instance.playerId == 3 ? 1 : 0; }
+    }
+
+}
