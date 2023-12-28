@@ -1,0 +1,75 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Spawner : MonoBehaviour
+{
+    public Transform[] spawnPoint;      // Enemy 스폰 위치 
+    public SpawnData[] spawnData;       // Enemy의 속성을 정의한 클래스를 선언 ( 여러 Enemy의 속성을 지정할 수 있다. )  
+
+    public float levelTime;             // 소환 레벨 구간을 결정하는 변수 
+    float timer;                        // 적 생성 시간 변수 
+    int level;                          // 난이도 설정 변수 
+    void Awake()
+    {
+        // 자식에 있는 모든 오브젝트를 초기화 ( 자식에 있는 모든 오브젝트에 Transform을 넣어준다고 생각하면 된다 )
+        spawnPoint = GetComponentsInChildren<Transform>();    
+
+        // 시간을 몬스터의 크기로 나누어 레벨을 디자인 ( ex 120초에 몬스터데이터가 6마리 있으면 20초 마다 다른 몬스터가 등장하도록 하는것 ) 
+        levelTime = GameManager.instance.maxGameTime / spawnData.Length;
+    }
+
+    void Update()
+    {
+        // 캐릭터가 죽거나, 게임 시간이 정지하였을 때 몬스터의 생성을 제한하기 위해서 
+        // 캐릭터의 isLive가 false이면 return
+        if (!GameManager.instance.isLive)
+            return;
+
+        // timer에 현재 시간을 계속 더해준다.
+        timer += Time.deltaTime;
+
+        // FloorToInt : 소수점 아래는 버리고 Int 형으로 바꾸는 함수
+        // CeilToInt : 소수점 아래를 올리고 Int 형으로 바꾸는 함수
+        // Mathf.Min(a,b) : 두개의 값 중에 작은 것을 반환한다. 
+        level = Mathf.Min(Mathf.FloorToInt(GameManager.instance.gameTime / levelTime), spawnData.Length - 1);
+
+        // 소환 준비 시간이 되었을 때 
+        // level의 값에 따라 spawnData안에 있는 오브젝트의 spawnTime 값을 가져온다. 
+        // timer가 그 값보다 클때 enemy를 생성 
+        if (timer > spawnData[level].spawnTime) {
+            // timer를 다시 0으로 초기화 하고 
+            timer = 0f;
+            // 스폰을 한다. 
+            Spawn();
+        }
+    }
+
+    void Spawn()
+    {
+        // PoolManager 스크립트의 Get 함수를 사용하여 오브젝트를 불러온다. 
+        // 0 번째에 있는 Enemy 오브젝트를 가져온다. 
+        GameObject enemy = GameManager.instance.pool.Get(0);
+
+        // 자기 자신도 포함해서 시작하기 때문에 자식부터 시작하기 위해서는 1부터 시작 ( 자기 자신이 0 )
+        // Transform은 자기 자신도 포함해서 계산하기 때문에 
+        // enemy의 위치를 spawnPoint 오브젝트로 지정 ( 단, 랜덤한 spawnPoint의 위치로 ) 
+        enemy.transform.position = spawnPoint[Random.Range(1, spawnPoint.Length)].position;
+
+        // Enemy 스크립트의 Init 함수에 SpawnData 클래스의 값을 전
+        // Enemy의 생성을 level마다 다르게 하도록 초기화 하는 로직 
+        // GetComponent로 Enemy 스크립트를 가져와서 함수 호출 
+        enemy.GetComponent<Enemy>().Init(spawnData[level]);
+    }
+}
+
+// 각각의 Enemy의 속성 관련 클래스 
+// 직렬화 ( Inspector 상에서 보여지도록 ) 
+[System.Serializable]
+public class SpawnData 
+{
+    public float spawnTime;     // 스폰 시간 
+    public int spriteType;      // Enemy의 타입
+    public int health;          // 적 체력 
+    public float speed;         // 적 스피드 
+}
