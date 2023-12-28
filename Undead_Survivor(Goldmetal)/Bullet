@@ -1,0 +1,63 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Bullet : MonoBehaviour
+{
+    public float damage;        // 데미지 변수 
+    public int per;             // 관통 변수 ( 몹을 관통하는 변수 ) 
+
+    Rigidbody2D rigid;          // 총알의 rigidbody 변수 
+
+    void Awake()
+    {
+        // rigidbody컴포넌트 초기화 
+        rigid = GetComponent<Rigidbody2D>();
+    }
+
+    // 초기화 함수 ( 데미지, 관통력, 방향 ) 
+    public void Init(float damage, int per, Vector3 dir)
+    {
+        // 변수 초기화 하는 부분 ( 값을 받아오기 때문에 초기화 )
+        // 받아온 값으로 초기화 
+        this.damage = damage;      
+        this.per = per;
+
+        // 관통력이 0보다 크다. 즉, 원거리 무기를 말한다. ( 근거리 무기는 관통력이 -100 이다 ) 
+        if(per >= 0) {
+            // 총알에 일정한 가속도를 부여한다. * 속도 
+            rigid.velocity = dir * 15f;
+        }
+    }
+
+    void OnTriggerEnter2D(Collider2D collision)
+    {
+        // Tag이 Enemy가 아니면 return, 또는 관통력이 -100 즉, 근접 무기일 때 return
+        if (!collision.CompareTag("Enemy") || per == -100) {
+            return;
+        }
+
+        // 적이 한번 맞았을 때 관통력을 -- ( 더이상 관통하지 않게 하기 위해서, 추후에 관통력을 올려줄텐데 그 때도 일정 적을 관통하며 결국 관통력은 0이 될 것) 
+        per--; 
+
+        // 관통력이 0보다 작을 때 ( 적을 관통력 만큰 관통하였을 때 )
+        if(per < 0) {
+            // 총알 오브젝트의 가속도를 0으로 만들고
+            rigid.velocity = Vector2.zero;
+            // 풀링에 다시 반환해 줘야하기 때문에 SetActive false로 반환해준다. 
+            gameObject.SetActive(false);
+        }
+    }
+
+    // 맵 밖으로 나가는 총알 없애기 
+    void OnTriggerExit2D(Collider2D collision)
+    {
+        // Area가 아니고 근접무기가 아니면 return 
+        if (!collision.CompareTag("Area") || per == -100) {
+            return;
+        }
+
+        // Area애 충돌시 바로 오브젝트 비활성화 
+        gameObject.SetActive(false);
+    }
+}
