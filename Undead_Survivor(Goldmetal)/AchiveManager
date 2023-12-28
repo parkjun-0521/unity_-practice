@@ -1,0 +1,136 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+
+/*
+ * 업적 달성으로 캐릭터를 해금하는 로직 
+*/
+
+public class AchiveManager : MonoBehaviour
+{
+    public GameObject[] lockCharacter;      // 잠겨있는 캐릭터 변수 
+    public GameObject[] unlockCharacter;    // 잠겨있지 않은 캐릭터 변수 
+    public GameObject uiNotice;             // 해금 알림판 오브젝트 변수 
+
+    enum Achive { UnlockPotato, UnlockRean }    // 열거형 데이터 작성 ( UnlockPotato, UnlockRean 이 값도 사용이 되지만 0,1 로도 사용할 수 있다 ) 
+    Achive[] achives;                           // 데이터응 저장할 배열 선언 
+
+    WaitForSecondsRealtime wait;                // 코루틴 딜레이 시간 변수 ( WaitForSecond는 TimeScale의 영향을 받는다. 따라서 WaitForSecondsReatime을 사용 ) 
+
+    void Awake()
+    {
+        // Enum.GetValues() : 주어진 enum(열거형)의 데이터를 전부 가져오는 함수 
+        achives = (Achive[])Enum.GetValues(typeof(Achive));     // enum 배열 초기화 
+
+        wait = new WaitForSecondsRealtime(5);   // 코루틴 딜레이 시간을 5초로 초기화 
+
+        // MyData 라는 키를 가지고 있지 않으면 Init() 함수 실행 
+        // 조건이 없으면 게임을 실행할 때 마다 Init을 실행하기 때문에 
+        // HasKey(키를 가지고 있는가) 즉, MyData라는 키가 있으면 실행하지 않도록 한다.
+        if (!PlayerPrefs.HasKey("MyData")) {
+            Init();
+        }
+    }
+
+    // 저장 데이터 초기화 함수 
+    void Init()
+    {
+        // PlayerPrefs : 저장 기능을 제공하는 유니티 내장 클래스 ( 유사 DB 같은 역할을 한다 )
+        // SetInt() : 데이터 저장 함수 
+        // 인자값 : ( "키값", int형 ) 데이터를 저장 
+        PlayerPrefs.SetInt("MyData", 1);        // MyData 라는 키값에 1 값이 저장이 된다.
+
+        // achives 배열을 전체 순회 
+        foreach (Achive achive in achives) {
+            // 열거형 데이터를 저장하기 위한 로직 ( 0 : 아직 미해금 상태 ) 
+            // UnlockPotato, UnlockRean 이라는 각각의 키 값으로 0 값을 저장 ( 미해금 상태 )
+            PlayerPrefs.SetInt(achive.ToString(), 0);
+        }
+    }
+
+    void Start()
+    {
+        UnlockCharacter();
+    }
+
+    // 캐릭터가 해금되었는지 확인 후 게임시작할 때 캐릭터 버튼 활성화 함수 
+    void UnlockCharacter()
+    {
+        for (int index = 0; index < lockCharacter.Length; index++) {
+            string achiveName = achives[index].ToString();          // 업적의 이름을 가져온다. ( 열거형 데이터를 가져온다. 문자열로 )
+            
+            // GetInt : 데이터를 가져온다.
+            bool inUnlock = PlayerPrefs.GetInt(achiveName) == 1;    // 열거형의 데이터를 키값으로 값을 가져온다. ( 업적이 달성이 되면 1, 그렇지 않으면 0 으로 각각 true, false 값을 저장 )
+
+            // 해금이 되면 true, 미해금이면 false 
+            lockCharacter[index].SetActive(!inUnlock);
+            unlockCharacter[index].SetActive(inUnlock);
+        }
+    }
+
+    void LateUpdate()
+    {
+        // 각 캐릭터의 열거형 데이터 값을 매개변수로 전달 
+        foreach(Achive achive in achives) {
+            CheckAchive(achive);
+        }
+    }
+
+    // 업적 관련 함수 
+    void CheckAchive(Achive achive)
+    {
+        bool isAchive = false;      // 확인용 bool 변수 
+
+        // 캐릭터 관련 분기 
+        switch (achive) { 
+            // 감자 캐릭 : kill 수가 10 이상이면 isAchive를 true
+            case Achive.UnlockPotato:
+                isAchive = GameManager.instance.kill >= 10;
+                break;
+            // 콩 캐릭 : 게임 시간을 다 버티면 isAchive를 true
+            case Achive.UnlockRean:
+                isAchive = GameManager.instance.gameTime == GameManager.instance.maxGameTime;
+                break;
+        }
+
+        // 위의 분기 값에서 isAchive가 true 이고 PlayerPrefs 의 키의 값이 0일때 
+        if (isAchive && PlayerPrefs.GetInt(achive.ToString()) == 0) {
+            // 그 키의 값을 1로 변경 
+            PlayerPrefs.SetInt(achive.ToString(), 1);
+
+            // 알림판 활성화 
+            // transform.childCount 자기 자신의 자식 개수 
+            for (int index = 0; index < uiNotice.transform.childCount; index++) {
+
+                // index가 업적의 순번과 맞으면 isActive true
+                bool isActive = index == (int)achive;
+
+                // 업적에 맞는 해금 알림판을 활성화 
+                // 자식 오브젝트를 index로 가져와 활성화 
+                uiNotice.transform.GetChild(index).gameObject.SetActive(isActive);
+            }
+
+            // 위 if문에서 자식 알림판을 먼저 활성화를 하고 코루틴에서 자기 자신을 활성화 한다. 
+            // 알림판이 떴다 사라지는 코루틴 
+            StartCoroutine(NotiveRoutine());
+        }
+    }
+
+    // 알림판 활성화 및 비활성 코루틴 
+    IEnumerator NotiveRoutine()
+    {
+        // 업적 알림판 활성화 
+        uiNotice.SetActive(true);
+
+        // 업적 알림판 사운드 
+        AudioManager.instance.PlaySfx(AudioManager.Sfx.LevelUp);    // 효과음 실행 ( enum에서 값을 가져와 매개변수로 전달 )  
+
+        // 5초로 초기화한 딜레이 시간 사용 
+        yield return wait;
+
+        // 업적 알림판 비활성화 
+        uiNotice.SetActive(false);
+    }
+}
