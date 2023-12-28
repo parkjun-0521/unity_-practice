@@ -1,0 +1,55 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Scanner : MonoBehaviour
+{
+    public float scanRange;             // 스캔을 할 범위  
+    public LayerMask targetLayer;       // 스캔할 오브젝트의 Layer
+    public RaycastHit2D[] targets;      // 스캔이된 오브젝트들  
+    public Transform nearestTarget;     // 스캔된 오브젝트중 가장 가까운 Target
+
+    void FixedUpdate()
+    {
+        // layCast의 원형 모양 ; CircleCastAll ( 캐스팅 시작위치, 반지름, 캐스틍 방향, 캐스팅 방향의 길이, 대상 레이어 )
+        // 캐스팅 방향의 길이 : 시작 위치 부터 얼만큼 떨어져서 원형 레이 캐스트를 구축할 것인가. 
+        targets = Physics2D.CircleCastAll(transform.position, scanRange, Vector2.zero, 0, targetLayer);
+
+        // 가장 가까운 타겟을 지정하여 대입 
+        nearestTarget = GetNearest();
+    }
+
+    // 가장 가까운 것을 찾는 함수 
+    Transform GetNearest()
+    {
+        Transform result = null;            // 반환값을 담을 변수 
+        float diff = 100;                   // 거리 변수 ( 범위 )
+
+        // 레이캐스트에 맞은 오브젝트를 모두 순회한다. 
+        foreach(RaycastHit2D target in targets) {
+
+            // 플레이어 위치 정보를 가져온다. 
+            Vector3 myPos = transform.position;
+
+            // RaycastHit2D에서 꺼내온 타겟 오브젝트의 위치 정보를 가져온다. 
+            Vector3 targetPos = target.transform.position;
+
+            // Distance ( a, b ) : 벡터 a 와 b 사이의 거리를 계산해주는 함수 
+            // 플레이어와 타겟오브젝트의 거리를 가져온다.
+            float curDiff = Vector3.Distance(myPos, targetPos);
+
+            // 플레이어와 타겟의 현재 거리가 지정한 거리보다 작을 때 즉, 지정한 범위 안에 타겟이 있을 때를 말한다. 
+            // 새로운 오브젝트가 탐색이 되면 그 오브젝트가 초기에 오브젝트보다 거리가 가까울 시 diff의 값이 바뀌게 되면서 target도 바뀐다. 
+            // 따라서 Player에게 점점 가까워 지는 target 오브젝트가 있으면 계속 그 오브젝트로 result 값이 바뀐다. 
+            if (curDiff < diff) {
+                // 거리 변수에 현재 거리 값을 대입 
+                diff = curDiff;
+                // 거리에 들어온 target의 위치를 반환값 변수에 대입 
+                result = target.transform;
+            }
+        }
+
+        // 최종적으로 if문에서 반환 해준 값이 반환된다. 
+        return result;
+    }
+}
