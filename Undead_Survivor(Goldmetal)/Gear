@@ -1,0 +1,77 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+// 장갑과 신발 오브젝트를 구현하는 로직 
+public class Gear : MonoBehaviour
+{
+    public ItemData.ItemType type;      // 아이템의 타입 가져오기 
+    public float rate;                  // 레벨별 데이터 
+
+    // 초기화 하는 함수 
+    public void Init(ItemData data)
+    {
+        // 기본 셋팅 
+        name = "Gear" + data.itemId;                // 아이템 이름 
+        transform.parent = GameManager.instance.player.transform;   // 부모의 위치를 Player의 부모위치로 변경 
+        transform.localPosition = Vector3.zero;     // Weapon과 마찬가지로 위치를 localPosition으로 초기화 
+
+        // 프로퍼티 셋팅 
+        type = data.itemType;       // 아이템 타입 지정 
+        rate = data.damages[0];     // 아이템의 초기 데미지 ( 기어는 데미지가 없어서 스피드라고 생각하면 된다. )
+        ApplyGear();                // 처음에 아이템이 생성 될 때 ( 초기의 레벨0 의 rate 값을 적용 ) 기어의 값을 모든 오브젝트에 적용 
+    }
+
+    // Gear 레벨업 하는 함수 
+    public void LevelUp(float rate)
+    {
+        this.rate = rate;       // rate 값을 받아온값으로 갱신  
+        ApplyGear();            // 레벨업을 했을 때 ( 레벨의 맞는 값을 적용한 기어 값 ) 기어의 값을 모든 오브젝트에 적용 
+    }
+
+
+    // 변경한 값을 반영하는 함수 
+    void ApplyGear()
+    {
+        // 각 아이템 타입에 동작하는 로직 작성 
+        switch (type) {
+            case ItemData.ItemType.Glove:   // 장갑 아이템 
+                RateUp();                   // 공격 속도를 변경하는 함수 
+                break;
+            case ItemData.ItemType.Shoe:    // 신발 아이템 
+                SpeedUp();                  // 이동 속도를 변경하는 함수 
+                break;
+        }
+    }
+
+    // 공격 속도를 증가시는 함수 ( 장갑 아이템 ) 
+    void RateUp()
+    {
+        // 모든 아이템의 공격 속도를 상승 시켜야 하기 때문에 
+        // 모든 무기 오브젝트를 가져온다.
+        // 부모 오브젝트가 Player 로 지정해줬으므로 transform.parent 즉, Player 오브젝트에서 자식 오브젝트가 가지고 있는 Weapon 스크립트를 가져온다. 
+        Weapon[] weapons = transform.parent.GetComponentsInChildren<Weapon>();
+
+        // 가져온 Weapon을 전체 순회한다. 
+        foreach(Weapon weapon in weapons) {
+            // weapon의 id 즉, 0번이면 근접무기, 1번이면 원거리 무기  
+            switch (weapon.id) {
+                case 0:
+                    float speed = 150 * Character.WeaponSpeed;      // 초기 근접 무기 회전 스피드 ( 캐릭별로 다르기 때문에 캐릭별 속성 속도를 곱해서 값을 구함 )
+                    weapon.speed = speed + (speed * rate);          // 근접 무기의 속도를 증가시긴다. 
+                    break;
+                default:
+                    speed = 0.5f * Character.WeaponRate;            // 초기 원거리 무기의 발사 딜레이 ( 캐릭별로 다르기 때문에 캐릭별 속성 속도를 곱해서 값을 구함 )
+                    weapon.speed = speed * (1f - rate);             // 원거리 무기의 발사 딜레이를 줄인다. 
+                    break;
+            }
+        }
+    }
+
+    // 플레이어의 이동속도를 올리는 함수 ( 신발 아이템 ) 
+    void SpeedUp()
+    {   
+        float speed = 3 * Character.Speed;                          // 초기의 이동속도 값을 가져온다 ( 캐릭별로 다르기 때문에 캐릭터의 속성 값을 가져와 곱해준다. ) 
+        GameManager.instance.player.speed = speed + speed * rate;   // GameManger의 Player에 직접 접근하여 속도를 변경해줌 
+    }
+}
