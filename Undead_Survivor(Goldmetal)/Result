@@ -1,0 +1,27 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+/*
+    게임이 끝났을 때 상단에 띄워줄 타이틀 지정 
+ */
+
+public class Result : MonoBehaviour
+{
+    // 상단에 띄울 타이틀을 지정 
+    public GameObject[] titles;
+
+    // 게임에서 졌을 때 ( 즉, 죽었을 때 )
+    public void Lose()
+    {
+        // 0번째 오브젝트 활성화 
+        titles[0].SetActive(true);
+    }
+
+    // 게임에서 이겼을 때 ( 즉, 제한시간을 버텼을 때 )
+    public void Win()
+    {
+        // 1번째 오브젝트 활성화 
+        titles[1].SetActive(true);
+    }
+}
