@@ -1,0 +1,83 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class RePosition : MonoBehaviour
+{
+    Collider2D coll;                // Collider 변수 생성 
+    void Awake()
+    {
+        // 변수 초기화 
+        coll = GetComponent<Collider2D>();
+    }
+
+    // 맵의 Collider를 나갔을 때 동작 
+    void OnTriggerExit2D(Collider2D collision)
+    {
+        // Area Tag가 아닐 경우는 returne으로 반환
+        if (!collision.CompareTag("Area")) 
+            return;
+
+        // 즉, 밑에 로직은 Area Tag일 경우 동작하는 로직 
+
+        Vector3 playerPos = GameManager.instance.player.transform.position;     // player 위치 가져오기 
+        Vector3 myPos = transform.position;                                     // 타일 위치 
+
+        // Player 오브젝트에 접근해서 Vector를 가져오는 로직 
+        // 로직을 수정하게 되면서 사용하지 않게 되었다.
+        //Vector3 playerDir = GameManager.instance.player.inputVec;
+
+        // 내 자신의 Tag가 무엇인지. 
+        switch (transform.tag) {
+            // 오브젝트의 Tag가 Ground일 경우
+            case "Ground":
+                // 플레이어와 타일맵의 거리를 말한다. 
+                float diffx = playerPos.x - myPos.x;         // x축 기준 거리 차이
+                float diffy = playerPos.y - myPos.y;         // y축 기준 거리 차이
+
+                // Player가 오른쪽으로 이동하면 diffx 값은 양수가 나오게 되고 1을 반환, 왼쪽으로 이동하면 음수가 나오게 되며 -1을 반환. 
+                // Player가 위쪽으로 이동하면 diffy 값은 양수가 나오게 되고 1을 반환, 아래쪽으로 이동하면 음수가 나오게 되며 -1을 반환. 
+                // 이 값을 이용하여 타일 맵이 이동할 방향을 구한다. 
+                float dirx = diffx < 0 ? -1 : 1;
+                float diry = diffy < 0 ? -1 : 1;
+
+                // 타일맵이 상하로 이동해야 하는지 좌우로 이동해야하는지 결정하기위해 
+                // x, y 축으로 이동한 크기를 구하되 절대 값으로 구하여 어느방향으로 더 많이 움직였는지를 판단한다. 
+                diffx = Mathf.Abs(diffx);       // Mathf.Abs 은 절대값을 의미한다. 
+                diffy = Mathf.Abs(diffy);       
+
+                // X축으로 더 많이 이동하였을 경우 타일 맵을 좌우 dirx 방향에 맞게 이동 
+                if (diffx > diffy) {
+                    // 이동할 크기를 지정 하는 Translate() 함수 사용 
+                    transform.Translate(Vector3.right * dirx * 40);
+                }
+                // Y축으로 더 만이 이동하였을 경우 타일 맵을 상하 diry 방향에 맞게 이동 
+                else if(diffx < diffy){
+                    transform.Translate(Vector3.up * diry * 40);
+                }
+                break;
+            // 오브젝트의 Tag가 Enemy일 경우, Enemy가 화면 밖으로 나갔을 경우 Player 앞으로 재배치 하는 로직 
+            case "Enemy":
+                // Enemy가 살이 있는지 부터 확인 
+                // Collider가 활성화 되어 있는지로 판단. (enabled 활성화가 되어있는 경우)
+                if (coll.enabled) {
+                    // 플레이어 위치 - 바닥의 위치 하면 방향이 나오게 된다. 
+                    // 단, 이 방향의 크기는 x축, y축 상관없이 10 또는 -10의 크기로 나오게 된다. 
+                    // 왜냐 하나의 타일 크기가 10, 10 이기때문이다. 
+                    // 방향을 구하면서 크기도 동시에 구해진다. 
+                    Vector3 dist = playerPos - myPos;
+
+                    // 랜덤한 위치로 등장하도록 한다. 
+                    // x,y 축을 -3 ~ 3 사이에 값이 나오도록 한다. 
+                    Vector3 ran = new Vector3(Random.Range(-3, 3), Random.Range(-3, 3), 0);
+
+                    // 전체 타일의 크기가 20 이므로 방향(10 또는 -10)에 2를 곱하여 몬스터가 맵 타일 끝에서 등장하도록 한다. 
+                    // 랜덤한 위치에 방향을 더하여 몬스터를 이동시키도록 한다. 
+                    // 방향과 크기를 구한것에 2를 곱한것은 맵의 반대쪽의 가장 부분을 말한다. 
+                    // 반대쪽 가장 끝 부분에서 -3 ~ 3 좌표 사이에서 랜덤하게 Enemy가 등장하도록 한다.
+                    transform.Translate(ran + dist * 2);
+                }
+                break;
+        }
+    }
+}
