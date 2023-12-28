@@ -1,0 +1,191 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class GameManager : MonoBehaviour
+{
+    // static으로 선언된 변수는 인스펙터에 나타나지 않는다. 
+    // static 변수로 선언하여 메모리에 올라가게 된다. 
+    // 어디서든 GameManager.instance 로 불러와서 사용이 가능하다. 
+    public static GameManager instance;     // 게임매니저 오브젝트 선언 
+
+    [Header("# Game Control")]
+    public bool isLive;
+    public float gameTime;                  // 현재 게임 시간 
+    public float maxGameTime = 2 * 10f;     // 최대 게임 시간  ( 20초 )
+
+    [Header("# Player info")]
+    public int playerId;                    // 플레이어를 구별하기 위한 ID 변수 ( 여러 플레이어 중 내가 선택한 플레이어가 무엇인지 확인하기 위한 변수 ) 
+    public float health;                    // 플레이어 체력 변수 
+    public float maxHealth = 100;           // 플레이어 최대 체력 변수 
+    public int level;                       // 플레이어 레벨 변수 
+    public int kill;                        // 플레이어 킬 변수
+    public int exp;                         // 플레이어 경험치 변수
+    public int[] nextExp = { 3, 5, 10, 100, 150, 210, 280, 360, 450, 600 };     // 플레이어 각 레벨의 MAX 경험치 
+
+    [Header("# GameObject")]
+    public PoolManager pool;                // 오브젝트 풀에 접근하기 위해 오브젝트 할당 변수 생성 
+
+    public Player player;                   // 플레이어 오브젝트 가져오기 
+
+    public LevelUp uiLevelUP;               // 레벨업시 등장할 UI 선언 
+    public Result uiResult;                 // 다시 시작을 위한 UI
+    public GameObject enemyCleaner;         // 게임이 끝났을 때 모든 적을 없애기 위한 오브젝트 변수 
+
+    // 메모리에 등록 
+    void Awake()
+    {
+        // GameManager를 자기 자신으로(this) 초기화 
+        instance = this;
+    }
+
+    // 버튼에서 동작하기 위해 함수로 바꿔주었다. 
+    // 매개변수로 플레이어의 ID 값을 받아온다.
+    public void GameStart(int id)
+    {
+        playerId = id;              // 플레이어의 id값을 받아온 값으로 초기화 
+        health = maxHealth;         // 시작할 때 현재 체력과 최대 체력이 같아지도록 한다. 
+
+        player.gameObject.SetActive(true);  // 플레이어 활성화 
+        uiLevelUP.Select(playerId % 2);     // 각 캐릭터의 ID에 맞는 무기가 가장 초반에 생성이 된다. ( 짝수면 근접, 홀수면 원거리 무기 ) 
+        isLive = true;                      // 캐릭터와 게임 시간 등, 게임이 동작하도록 하기 위해 isLive를 true로 초기화 
+        Resume();
+
+        // 오디오 
+        AudioManager.instance.PlayBgm(true);                        // 배경음 멈춤 
+        AudioManager.instance.PlaySfx(AudioManager.Sfx.Select);     // 효과음 실행 ( enum에서 값을 가져와 매개변수로 전달 ) 
+    }
+
+    // 플레이어가 죽었을 때 동작하는 함수 
+    public void GameOver()
+    {
+        // 코루틴 시작 
+        StartCoroutine(GamOverRoutine());
+    }
+
+    // 플레이어가 죽었을 때 동작하는 코루틴
+    IEnumerator GamOverRoutine()
+    {
+        // 죽었을 때 isLive를 false 
+        isLive = false;
+        
+        // 0.5초의 딜레이
+        yield return new WaitForSeconds(0.5f);
+
+        // 다시시작 UI 활성화 
+        uiResult.gameObject.SetActive(true);
+
+        // 상단에 보여줄 타이틀 활성화 함수 ( Result 스크립트 확인 ) 
+        uiResult.Lose();
+
+        // 게임 멈추기 
+        Stop();
+
+        //오디오 
+        AudioManager.instance.PlayBgm(false);                   // 배경음 멈춤 
+        AudioManager.instance.PlaySfx(AudioManager.Sfx.Lose);   // 효과음 실행 ( enum에서 값을 가져와 매개변수로 전달 )  
+    }
+
+    // 플레이어가 제한시간을 버텼을 때 ( 게임 이겼을 때 )
+    public void GameVictory()
+    {
+        StartCoroutine(GamVictoryRoutine());
+    }
+
+    // 게임을 이겼을 때 코루틴 
+    IEnumerator GamVictoryRoutine()
+    {
+        // 게임을 끝내기 위해 플레이어와 관련된 모든 동작을 멈춤 
+        // 그렇게 하기위해 isLive를 false
+        isLive = false;
+
+        // 남아 있는 적을 없애기 위한 오브젝트 활성화 
+        enemyCleaner.SetActive(true);
+
+        // 0.5초간 딜레이를 준다. 
+        yield return new WaitForSeconds(0.5f);
+
+        // 다시 시작 UI를 활성화 
+        uiResult.gameObject.SetActive(true);
+
+        // 게임에서 이겼을 때의 타이틀 이미지를 띄워준다. ( Result 스크립트 확인 ) 
+        uiResult.Win();
+
+        // 게임 정지 
+        Stop();
+
+        // 오디오 
+        AudioManager.instance.PlayBgm(false);                   // 배경음 실행 
+        AudioManager.instance.PlaySfx(AudioManager.Sfx.Win);    // 효과음 실행 ( enum에서 값을 가져와 매개변수로 전달 )  
+    }
+
+    // 게임이 끝나고 다시시작 
+    public void GameReTry()
+    {
+        // 씬불러오기로 다시시작한다. ( 씬의 이름을 적더줘도 되지만, Build에서 index를 확인하여 index를 넣어줘도 된다. ) 
+        // 0번째 씬을 다시 불러온다.
+        SceneManager.LoadScene(0);
+    }
+
+    void Update()
+    {
+        // 게임 시간을 멈추기위해 isLive가 false일 때 return 하도록 한다. 
+        if (!isLive)
+            return;
+
+        // 현재 게임의 시간 
+        gameTime += Time.deltaTime;
+
+        // 현재 시간이 지정한 MAX 게임 시간보다 커졌을 경우 
+        // 현재 게임 시간을 MAX 게임시간으로 초기화
+        // 게임을 끝까지 버텼다는 의미 이기때문에 GameVictory() (승리하였을 때 동작하는 함수)를 실행 
+        if (gameTime > maxGameTime) {
+            gameTime = maxGameTime;
+            GameVictory();
+        }
+    }
+
+    // 경험치를 획득 했을 때 동작하는 함수 
+    public void GetExp()
+    {
+        // 게임이 끝났을 때 경험치를 얻을 경우가 생긴다. 
+        // 그 경우를 없애기 위해 캐릭터가 동작을 할 때만 경험치를 얻도록 한다. 
+        if (!isLive) {
+            return;
+        }
+
+        // 겸험치 증가 
+        exp++;
+
+        // 현재 경험치가 level에 관련된 nextExp 와 같을 때 
+        // MAX 레벨이 되었을 때 더이상 증가하지 않게 하기 위해서 최대값 도달시 최대값으로 고정하기 위해 Mathf.Min() 함수를 사용해서 제어한다.
+        // Mathf.Min(a,b) 는 a와 b 중에 더 작은 값을 선택 ( level은 계속 증가하겠지만 nextExp.Length-1 = 9로 고정이 되기 때문에 10이상부터는 9로 고정 )
+        if (exp == nextExp[Mathf.Min(level, nextExp.Length-1)]) {
+            // 레벨업을 할 경험치를 다 모았을 때 
+
+            // 레벨 증가 ( 즉, 다음 레벨 경험치 증가 ) 
+            level++;
+
+            // 현재 경험치 초기화 
+            exp = 0;
+
+            // 레벨업 했을 때 UI를 보여주기위해 LevelUP스크립트의 함수 실행 
+            uiLevelUP.Show();
+        }
+    }
+
+    // 게임 정지 
+    public void Stop()
+    {
+        isLive = false;     // 기본적인 모든 동작을 멈추게 하기 위해 isLive를 false로 한다. 
+        Time.timeScale = 0; // 유니티 시간 속도 ( 시간의 흐름을 0으로 하여 0배속으로 시간이 흐르도록 한다. )
+    }
+
+    // 게임 재개 
+    public void Resume()
+    {
+        isLive = true;      // 멈춘 이후 다시 동작하도록 하기 위해 true 
+        Time.timeScale = 1; // 우니티 시간 속도 ( 시간의 흐름을 1로 하여 1배속으로 시간이 흐르도록 한다. ) 
+    }
+}
