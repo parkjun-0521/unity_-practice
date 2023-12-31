@@ -1,86 +1,84 @@
-// 2022-06-29
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Enemy_Move : MonoBehaviour
+public class EnemyMove : MonoBehaviour
 {
-    public int nextMove;                                     // -1 왼쪽, 0 정지, 1 오른쪽  이동을 담는 변수 
+    Rigidbody2D rigid;                  // Rigidbody2D 변수 
+    public int nextMove;                // 이동할 방향   
+    Animator anime;                     // 애니메이션 변수 
+    SpriteRenderer spriteRenderer;      // SpriteRenderer 변수 ( Filp을 사용하기 위해 선언 ) 
+    CapsuleCollider2D capsuleCollider;
 
-    Rigidbody2D rigid;                                      // Rigidbody2D 를 rigid 변수로 선언 
-    Animator anima;                                         // Animator 를 anima 변수로 선언
-    SpriteRenderer spriteRenderer;                          // SpriteRenderer 를 spriteRenderer 변수로 선언
-    CircleCollider2D circleCollider;                        // CircleCollider2D 를 circleCollider 변수로 선언
-    void Start()
+    void Awake()
     {
-        rigid = GetComponent<Rigidbody2D>();                // rigid 변수로 GetComponent를 이용하여 Rigidbody2D를 호출 
-        anima = GetComponent<Animator>();                   // ainma 변수로 GetComponent를 이용하여 Animator를 호출 
-        spriteRenderer = GetComponent<SpriteRenderer>();    // spriteRenderer 변수로 GetComponent를 이용하여 SpriteRenderer 호출
-        circleCollider = GetComponent<CircleCollider2D>();  // circleCollider 변수로 GetComponent를 이용하여 CircleCollider2D 호출
-        Invoke("Think",3);                                  // Invoke("함수명", 값); => 값 만큼 기다렸다가 함수가 동작 
+        // 컴포넌트 초기화 
+        rigid = GetComponent<Rigidbody2D>();
+        anime = GetComponent<Animator>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        capsuleCollider = GetComponent<CapsuleCollider2D>();
+
+        Invoke("Think",2f);
     }
 
-
-
-    void FixedUpdate()
+    
+    void Update()
     {
-        // 이동 
-        rigid.velocity = new Vector2(nextMove, rigid.velocity.y);                                                      // velocity를 변경하여 키를 누르지 않아도 x 값에 의해 이동 
+        // Enemy 이동 
+        rigid.velocity = new Vector2(nextMove, rigid.velocity.y);
 
-        // 지형 확인후 낭떨어지면 방향 전환 
-        Vector2 frontVec = new Vector2(rigid.position.x + nextMove * 0.5f, rigid.position.y + -0.5f);                  // 현재 위치에서 다음 이동할 방향의 x 좌표에 nextMove를 더한 값을 frontVec에 저장 
-        Debug.DrawRay(frontVec, Vector2.down, new Color(0, 1, 0));                                                     // Ray를 enemy의 다음 움직임 방향쪽으로 그리기 ( 1칸 앞에 그려진다 ) 
-        RaycastHit2D rayHit = Physics2D.Raycast(frontVec, Vector3.down, 1, LayerMask.GetMask("Platform"));             // ratHit 변수에 frontVec 만큼 떨어진 아래 방향으로 쏜 Ray 값을 넘긴다. ( Platform 이라는 LayerMask를 가진 오브젝트인지 확인 하기 위해 ) 
-        if (rayHit.collider == null) {                                                                                 // Ray가 Platform과 닿지 않았을 때 
-            //Debug.Log("경고! 이 앞 낭떨어지");
-            Turn();                                                                                                    // 방향 전환 함수    
+        // 장애물 확인 ( 낭떨어지 확인 ) 
+        // 내앞을 확인하기 위한 값 계산 ( 현재 내 위치에서 Think() 함수에서 구했던 random 값을 더해준다. 그러면 내가 가는 방향의 앞에가 구해진다. ) 
+        Vector2 frontVec = new Vector2(rigid.position.x + nextMove * 0.3f, rigid.position.y);
+        Debug.DrawRay(frontVec, Vector3.down, new Color(0, 0, 1));
+        RaycastHit2D rayHit = Physics2D.Raycast(frontVec, Vector3.down, 1, LayerMask.GetMask("Floor"));
+        if(rayHit.collider == null) {
+            Turn();
         }
     }
-    
-   
-    void Think()                                          // 이동을 결정 하는 함수 
-    {
-        // 다음 위치 생성 난수 
-        nextMove = Random.Range(-1, 2);                   // -1 ~ 1 사이의 난수 발생 ( Range( 초기값, 최대값+1 )    ==> ray를 찍어 낭떨어지를 확인 할 때 쉽게 확인 할 수 있게 정수로 선언 
 
-        // 애니메이션 
-        anima.SetInteger("WalkSpeed", nextMove);          // 애니메이션을 int형을 만들어 놨기 때문에  SetInteger 를 사용한다. 
+    // 낭떨어지를 만났을 때 회전하는 함수 
+    void Turn()
+    {
+        nextMove *= -1;                         // Floor 가 null 이면 방향를 바꿔야 하기 때문에 다음 방향에 -1을 곱해서 방향을 바꿈 
+        spriteRenderer.flipX = nextMove == 1;   // 방향을 바꾸면서 스프라이트도 방향을 바꿈 
+        CancelInvoke();                         // 실행중인 Invoke 를 중지 ( Invoke() 가 아에 사라지는게 아니라 일시 정지하는거 같음 ) 
+        Invoke("Think", 2f);                    // Invoke 다시 실행 
+    }
+
+    // 랜덤한 Enemy의 이동방향을 결정 
+    void Think()
+    {
+        // 변수 선언 
+        float nextThinkTime = Random.Range(2f, 3.5f);   // 랜덤한 함수 실행 시간 ( Invoke() ) 
+        nextMove = Random.Range(-1, 2);                 // 랜덤한 방향 
 
         // 방향 전환 
-        if (nextMove != 0)                                // 다음 이동이 0이 아닐때만 
-            spriteRenderer.flipX = nextMove == 1;         // -1 : 왼쪽, 1 : 오른쪽 을 볼때 마다 flip이 켜진다.
+        if(nextMove != 0)
+            spriteRenderer.flipX = nextMove == 1;
 
-        // 재귀함수로 다음 위치 생각 ( 재귀 함수는 아래에 적어주는 것이 좋다 )
-        float nextThinkTime = Random.Range(2f, 5f);
-        Invoke("Think", nextThinkTime);                   // 1~3초 간격으로 재귀함수 호출 
+        // 애니메이션 
+        anime.SetInteger("WalkSpeed", nextMove);
+
+        // 재귀함수 ( Awake에서 한번 실행 후 계속 자기 자신을 실행 )
+        Invoke("Think", nextThinkTime);
     }
 
-    void Turn()                                           // 방향 전환 함수 
+    // 데미지 입었을 때 
+    public IEnumerator OnDamaged()
     {
-        nextMove = nextMove * -1;                         // Ray가 Platform과 닿지 않았을 때 낭떨어지라고 판단하여 방향을 전환 
-        spriteRenderer.flipX = nextMove == 1;             // -1 : 왼쪽, 1 : 오른쪽 을 볼때 마다 flip이 켜진다.
-        CancelInvoke();                                   // CancelInvoke() 함수는 Invoke를 초기화 시켜준다. 
-        Invoke("Think", 3);                               // Invoke("함수명", 값); => 값 만큼 기다렸다가 함수가 동작 
-    }
+        spriteRenderer.color = new Color(1, 1, 1, 0.5f);
 
-    public void OnDamaged(){                              // 외부에서 불러 올때는 public으로 
-        // 몹 색 변경
-        spriteRenderer.color = new Color(1, 1, 1, 0.4f);
-
-        // 몹 상하 반전 
         spriteRenderer.flipY = true;
 
-        // 몹 충돌 비활성화 
-        circleCollider.enabled = false;
+        capsuleCollider.enabled = false;
 
-        // 몹 이펙트 
+        nextMove = 0;
+
         rigid.AddForce(Vector2.up * 5, ForceMode2D.Impulse);
 
-        // 몹 삭제 
-        Invoke("DeActive", 5);
-    }
+        yield return new WaitForSeconds(5.0f);
 
-    void DeActive(){                                       
-        gameObject.SetActive(false);                        // 데미지를 받을 시 오브젝트 비활성화
+        gameObject.SetActive(false);
     }
 }
