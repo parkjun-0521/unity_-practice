@@ -1,0 +1,25 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Player : MonoBehaviour
+{
+    public int bulletCount;
+
+    public float delay;
+    void Update()
+    {
+        delay += Time.deltaTime;
+        if (Input.GetMouseButton(0) && delay > 0.05f) {
+            GameObject bulletObj = GameManager.instance.poolManager.GetObject(0);
+            bulletObj.transform.position = transform.position;
+
+            Rigidbody bulletRigid = bulletObj.GetComponent<Rigidbody>();
+            bulletRigid.velocity = transform.forward * 10.0f;
+
+            bulletCount += 360;
+            transform.eulerAngles = new Vector3(0, bulletCount / 90.0f,0);
+            delay = 0;
+        }
+    }
+}
