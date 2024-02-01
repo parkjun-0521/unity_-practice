@@ -45,7 +45,7 @@ CLOSED                                                                          
 add the start node to OPEN                                                         // 시작 노드를 OPEN Nodex 을 추가 
                                                                                         
 loop {                                                                             // 찾을 때 까지 loop 문을 돈다. ( while문 사용 )
-    current = node in OPEN with the lowest f_cost                                  // 임의의 변수 current에 OPEN Node 중에서 f(n)의 값이 작은 것을 대입 ( current : 현재 노드 )
+    current = node in OPEN with the lowest f_cost                                  // 임의의 변수 current에 OPEN Node 중에서 f(n)의 값이 작은 것을 대입
     remove current from OPEN                                                       // OPEN Node 에서 current 값을 제거 ( 작은 값으로 이동하기 때문에 current는 닫힌 노드가 된다 )
     add current to CLOSED                                                          // CLOSED Node에 current 값을 추가 ( 닫힌 노드가 된 current를 CLOSED에 추가 )
 
