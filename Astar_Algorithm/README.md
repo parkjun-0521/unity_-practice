@@ -37,8 +37,30 @@ f(n)은 g(n) + h(n) 의 비용을 말합니다. 이 값을 통해 경로를 탐�
     
 따라서 A* 알고리즘은 f(n)의 비용이 가장 작은 타일로 이동하여 길을 찾습니다. f(n)이 작은 모든 타일을 탐색하기 때문에 BFS 방식입니다. 
 
-## A* Algorithm 구현 
+## A* Algorithm 구현 원리 
 
-```
+```ruby
+OPEN                                                                               // OPEN Node ( 비어있고 열려있는 노드 )
+CLOSED                                                                             // CLOSED Node ( 닫혀있는 노드 ) 
+add the start node to OPEN                                                         // 시작 노드를 OPEN Nodex 을 추가 
+                                                                                        
+loop {                                                                             // 찾을 때 까지 loop 문을 돈다. ( while문 사용 )
+    current = node in OPEN with the lowest f_cost                                  // 임의의 변수 current에 OPEN Node 중에서 f(n)의 값이 작은 것을 대입 ( current : 현재 노드 )
+    remove current from OPEN                                                       // OPEN Node 에서 current 값을 제거 ( 작은 값으로 이동하기 때문에 current는 닫힌 노드가 된다 )
+    add current to CLOSED                                                          // CLOSED Node에 current 값을 추가 ( 닫힌 노드가 된 current를 CLOSED에 추가 )
+
+    if current is the target node                                                  // 현재 노드가 목표 노드를 찾았으면 종료 
+        return
+
+    foreach neighbour of the current node                                          // 목표 노드를 못찾았을 경우 현재 노드에서 이웃 노드를 탐색한다.         
+        if neighbour is not traversable or neighbour is in CLOSED                  // 이웃 노드중에 통과할 수 없거나 닫힌 노드가 없는경우 ( 범위 안 && 장애물 없음 && CLOSED Nosd가 없는 경우 )
+            skip to the next neighbour                                             // 다음 이웃 노드로 이동
+
+        if new path to neighbour is shorter OR neighbour is not in OPEN            // 이동비용이 이웃노드의 g()보다 작거나 || OPEN에 이웃 노드가 없는 경우   
+            set f_cost of neighbour                                                // 이웃 노드의 f() 비용을 설정한다. ( 먼저 g(), h() 비용을 계산하여 작업을 수행 )
+            set patent of neighbour to current                                     // 현재 노드를 이웃 노드의 부모로 설정한다. 
+            if neighbour is not in OPEN                                            // 이웃 노드가 열린 목록에 없을 경우 ( 즉, 닫힌 노드가 아닌경우 )
+                add neighbour to OPEN                                              // 이웃 노드를 OPEN Node에 추가하고 이 작업을 계속 반복한다. 
+}
 ```
   
