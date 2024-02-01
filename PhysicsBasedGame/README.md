@@ -19,6 +19,7 @@
 
   - 동글이가 생성되는 위치입니다.
   - 동글이는 2초 간격으로 생성됩니다.
+  - 동글이의 생성은 오브젝트 풀링으로 구현하였습니다. 
 
   <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/PhysicsBasedGame/image/play2.PNG" alt="Image Error" width="20%" height="10%" />
   
@@ -28,6 +29,8 @@
 
   ### 게임 오버 
   <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/PhysicsBasedGame/image/dead.PNG" alt="Image Error" width="20%" height="10%" />
+
+  - 동글이가 라인에 
 
   <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/PhysicsBasedGame/image/gameover.PNG" alt="Image Error" width="20%" height="10%" />
 
