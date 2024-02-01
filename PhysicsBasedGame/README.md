@@ -30,8 +30,13 @@
   ### 게임 오버 
   <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/PhysicsBasedGame/image/dead.PNG" alt="Image Error" width="20%" height="10%" />
 
-  - 동글이가 라인에 
+  - 동글이가 라인에 2초 이상 닿았을 경우 빨간색으로 색을 변경하여 위험 경고를 보여줍니다. 
 
   <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/PhysicsBasedGame/image/gameover.PNG" alt="Image Error" width="20%" height="10%" />
 
+  - 동글이가 라인에 4초이상 닿았을 경우 게임이 종료 됩니다.
+  - 모든 오브젝트를 비활성화 하고 종료 UI를 활성화 시킵니다. 
+  - 재시작 버튼에 현재 점수를 알려줍니다.
+  - 현재 점수가 최고 점수보다 높을 시 최고점수를 바꿔줍니다.
+  - PlayerPrefs 를 사용하여 최고 점수를 저장합니다. 
   
