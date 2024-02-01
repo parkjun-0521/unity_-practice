@@ -16,6 +16,26 @@
 
 ## A* Algorithm 비용 계산 
 
+ <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/Astar_Algorithm/Image/grid.PNG" width="20%" height="10%" /> 
+ 
+ - 초록색 : Start Node
+ - 빨간색 : End Node
+ 
+ <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/Astar_Algorithm/Image/Node.PNG" width="20%" height="10%" />  
+ 
+ - 노드 한칸의 비용 표기  
+
+ 
+g(n)은 출발 노드에서 현재 노드까지 이동하는데 드는 최소 비용을 말합니다.
+여기서 g(n)의 값은 가로/세로 10, 대각선 14 입니다. 
+피타고라스 정의에 의해 대각선의 길이는 $a^2+b^2=c^2$ 이므로, 가로/세로의 길이가 10인 대각선의 길이는 10√2 즉, 14.14... 에서 반올림하여 14가 됩니다. 
     
+h(n)은 현재 노드에서 목표 노드까지 이동하는데 드는 비용을 말합니다. 
+오직 가로/세로만으로 이동하여 드는 비용을 말합니다. 
+    
+f(n)은 g(n) + h(n) 의 비용을 말합니다. 이 값을 통해 경로를 탐색할 때 어느 노드가 가장 작은 비용을 가지고 있는지 판단하여 움직입니다. 
+    
+따라서 A* 알고리즘은 f(n)의 비용이 가장 작은 타일로 이동하여 길을 찾습니다. f(n)이 작은 모든 타일을 탐색하기 때문에 BFS 방식입니다. 
+
     
   
