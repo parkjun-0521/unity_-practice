@@ -27,17 +27,52 @@
   
   - 플레이 씬
     - 플레이어 이동을 InputManager를 사용하여 구현
-    - 적의 등장은 텍스트 파일을 이용하여 특정 스폰 포인트에서 등장 
-    - 보스 몬스터는 랜덤 4개의 패턴을 사용할 수 있습니다.
-    - 몬스터는 사망할 경우 확률에 따라 아이템을 드랍하도록 하였습니다. 
+    - 몬스터의 드랍테이블 구현
+    - 보스 몬스터의 패턴 구현
+    - 적의 등장은 텍스트 파일을 이용하여 특정 스폰 포인트에서 등장
+      ```C#
+      void ReadSpawnFile()
+      {
+          // 변수 초기화 
+          spawnList.Clear();
+          spawnIndex = 0;
+          spawnEnd = false;
+  
+          // 파일 열기  
+          TextAsset textFile = Resources.Load("Stage 0") as TextAsset;
+          StringReader stringReader = new StringReader(textFile.text);
+  
+          while (stringReader != null) {
+              string line = stringReader.ReadLine();
+  
+              Debug.Log(line);
+  
+              if (line == null)
+                  break;
+  
+              // 파일 읽어 오기 
+              Spawn spawnData = new Spawn();   // 스폰의 구조체 가져오기  
+              spawnData.delay = float.Parse(line.Split(',')[0]);   //Parse 형변환    Split() 괄호안에 내가 메모장에서 구분 주었던 문자를 넣어주면 됨 
+              spawnData.type = line.Split(',')[1];
+              spawnData.point = int.Parse(line.Split(',')[2]);
+  
+              spawnList.Add(spawnData);
+          }
+  
+          // 파일 닫기 
+          stringReader.Close();
+  
+          //nextSpawnDelay = spawnList[0].delay;
+      }
+      ```
 
   ### 아이템 사용 
   <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/2D_%20Shooting_game/Image/boom.PNG" alt="Image Error" width="30%" height="30%" />
 
-  - 마우스 우클릭을 사용하여 아이템을 사용하는 경우입니다
-  - 필드 전체에 큰 데미지를 줍니다.
-  - 사용시 플레이어가 무적이 되도록 설계하였습니다. 
-
+  - InputManager를 사용하여 아이템 동작 구현 
+  - 잠시 무적이 되도록 구현
+    - 무적은 
+   
   ### 게임 오버
   <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/2D_%20Shooting_game/Image/dead.PNG" alt="Image Error" width="30%" height="30%" />
 
