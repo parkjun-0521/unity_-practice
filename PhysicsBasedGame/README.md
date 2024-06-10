@@ -6,10 +6,6 @@
 ## 시연 영상
   <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/PhysicsBasedGame/image/PhysicsBasedGame-SampleScene-Windows_-Mac_-Linux-Unity-2021.3.gif" alt="Image Error" width="50%" height="50%" />
 
-## 알게된 점 
-
-  ### 다중 사운드 
-
 ## 기능 구현 
 
   ### 게임 시작 
