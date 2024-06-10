@@ -70,11 +70,10 @@
   <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/2D_%20Shooting_game/Image/boom.PNG" alt="Image Error" width="30%" height="30%" />
 
   - InputManager를 사용하여 아이템 동작 구현 
-  - 잠시 무적이 되도록 구현
-    - 무적은 
+  - Enemy의 관련된 태그의 오브젝트를 모두 비활성화하여 무적을 구현 
    
   ### 게임 오버
   <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/2D_%20Shooting_game/Image/dead.PNG" alt="Image Error" width="30%" height="30%" />
 
-  - 게임 오버시 모든 시간을 정지 시킵니다.
-  - reStart 버튼을 이용하여 게임을 다시 시작할 수 있습니다. 
+  - 게임 오버 시 TimeScale을 0으로 하여 시간을 정지
+  - reStart 버튼을 이용하여 현재의 씬을 다시 불러와 게임 재개 
