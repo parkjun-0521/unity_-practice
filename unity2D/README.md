@@ -46,4 +46,18 @@
 ## 게임 내부 기능 
 
 <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/unity2D/PlatFormer.PNG" alt="Image Error" width="50%" height="50%" />
-- 
+  
+  - 캐릭터 이동 및 점프
+    - 캐릭터의 이동 및 점프를 InputManager를 사용하여 간단하게 구현
+    - 애니메이션 Parameter bool값으로 하여 애니메이션 전환 구현 
+  
+  - 몬스터 AI
+    - 몬스터는 일정 시간 좌, 우로 이동을 결정한다. 따라서 랜덤으로 좌, 우로 이동을 함
+    - 정면 앞쪽으로 Ray를 아래방향으로 쏴서 땅에 닿았는지 아닌지를 판단하여 낭떨어지를 판단하고 방향 전환 
+  
+  - 몬스터 피격 처리
+    - 캐릭터의 Y 좌표가 몬스터의 Y 좌표보다 높을 시 밟았다고 판단하여 몬스터가 죽게된다. 
+    - 이때 Collider를 끄고 위쪽으로 힘을 주며 Color의 alpha 값을 낮춰 죽은거 같은 애니메이션을 만들어주었다.
+    - 캐릭터가 몬스터와 피격시 같은 원리로 넉백을 구현하였다. 
+  
+  - 씬 전환 
