@@ -25,12 +25,11 @@
     
   <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/2D_%20Shooting_game/Image/play.PNG" alt="Image Error" width="30%" height="30%" />
   
-  - 플레이 하면 가장 먼저 등장하는 씬입니다.
-  - 플레이어의 이동은 키보드로 이동할 수 있도록 설계했습니다.
-  - 플레이어 공격은 마우스 좌클릭으로 구현하였습니다. 
-  - 적의 등장은 텍스트 파일을 이용하여 등장하도록 설계하였습니다.
-  - 보스 몬스터는 랜덤 4개의 패턴을 사용할 수 있습니다.
-  - 몬스터는 사망할 경우 확률에 따라 아이템을 드랍하도록 하였습니다. 
+  - 플레이 씬
+    - 플레이어 이동을 InputManager를 사용하여 구현
+    - 적의 등장은 텍스트 파일을 이용하여 특정 스폰 포인트에서 등장 
+    - 보스 몬스터는 랜덤 4개의 패턴을 사용할 수 있습니다.
+    - 몬스터는 사망할 경우 확률에 따라 아이템을 드랍하도록 하였습니다. 
 
   ### 아이템 사용 
   <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/2D_%20Shooting_game/Image/boom.PNG" alt="Image Error" width="30%" height="30%" />
