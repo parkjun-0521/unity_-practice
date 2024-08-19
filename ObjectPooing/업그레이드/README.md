@@ -111,3 +111,27 @@ public class Pooling : MonoBehaviourPun {
     }
 }
 ```
+
+# 개선된 점 
+    
+    
+## 오브젝트 저장 변경  
+    
+```C#
+private Dictionary<string, List<GameObject>> pools; // 오브젝트를 찾을 딕셔너리 생성
+```
+기존에는 단순 배열에만 저장하였지만 바꾸면서 오브젝트 이름을 키값으로 생성될 오브젝트와 맵핑
+
+이렇게 하므로 index의 값을 외우고 있지 않아도 오브젝트의 이름으로 아이템을 생성할 수 있었다. 
+
+
+## 검색 방식의 변경 
+    
+```C#
+public GameObject GetObject(string key, Vector3 pos)
+```
+기존에는 indx로 찾았던 것을 Key값으로 찾는 방식으로 변경
+
+또한 초기의 오브젝트 생성 위치를 주어 원하는 위치에 바로 생성이 가능하게 하였다. 
+
+
