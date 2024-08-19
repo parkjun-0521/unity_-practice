@@ -72,3 +72,11 @@ loop {                                                                          
 
 ## 구현 
 <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/Astar_Algorithm/Image/Astar2.png" width="40%" height="20%" />  <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/Astar_Algorithm/Image/Astar.png" width="40%" height="20%" />  
+
+- inspactor 화면에서 Top과 Target의 값을 조정하여 Start위치에서 Target위치까지의 최단 거리를 구할 수 있다.
+- 타일맵에서 Wall 이라는 LayerMask를 가진 타일을 장애물이라 판단하고 대각선이 없는 최단 거리를 구해준다. 
+
+<img src="https://github.com/parkjun-0521/unity_-practice/blob/main/Astar_Algorithm/Image/Astar4.png" width="40%" height="20%" />  <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/Astar_Algorithm/Image/Astar3.png" width="40%" height="20%" />  
+
+- 인스펙터 화면에서 Allow Diagonal를 체크해주면 대각선으로 이동을 하여 최단 거리를 구해준다.
+- 탐색하는 과정은 위와 동일하지만 대각선으로 판단하여 최단 거리를 구해준다. 
