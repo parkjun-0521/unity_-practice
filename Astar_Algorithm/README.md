@@ -68,4 +68,7 @@ loop {                                                                          
                 add neighbour to OPEN                                              // 이웃 노드를 OPEN Node에 추가하고 이 작업을 계속 반복한다. 
 }
 ```
-  
+
+
+## 구현 
+<img src="https://github.com/parkjun-0521/unity_-practice/blob/main/Astar_Algorithm/Image/Astar2.png" width="40%" height="20%" />  <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/Astar_Algorithm/Image/Astar.png" width="40%" height="20%" />  
