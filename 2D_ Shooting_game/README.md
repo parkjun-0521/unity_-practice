@@ -77,7 +77,8 @@
   <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/2D_%20Shooting_game/Image/boom.PNG" alt="Image Error" width="30%" height="30%" />
 
   - InputManager를 사용하여 아이템 동작 구현 
-  - Enemy의 관련된 태그의 오브젝트를 모두 비활성화하여 무적을 구현 
+  - Enemy의 관련된 태그의 오브젝트를 모두 비활성화하여 무적을 구현
+  - 아이템 및 적은 모두 오브젝트 풀링에서 생성하여 메모리를 관리하였다 
    
   ### 게임 오버
   <img src="https://github.com/parkjun-0521/unity_-practice/blob/main/2D_%20Shooting_game/Image/dead.PNG" alt="Image Error" width="30%" height="30%" />
