@@ -56,7 +56,7 @@ public class Pooling : MonoBehaviourPun {
             if (prefab == null) return null;
 
             // 새로운 아이템 프리팹 생성 
-            select = Instantiate(prefab, Vector3.zero, Quaternion.identity);
+            select = Instantiate(prefab, pos, Quaternion.identity);
 
             // 풀에 아이템 추가 
             pools[key].Add(select);
